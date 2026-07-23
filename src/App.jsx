@@ -13,12 +13,7 @@ const DEFAULT_HOUSE = {
   created_at: new Date().toISOString()
 };
 
-const DEFAULT_MEMBERS = [
-  { id: 'u1', name: 'User 1 (คุณสมชาย)', email: 'user1@meeyoo.app', role: 'เจ้าของบ้าน', avatar: '👨‍💻' },
-  { id: 'u2', name: 'User 2 (คุณสมหญิง)', email: 'user2@meeyoo.app', role: 'สมาชิก', avatar: '👩‍🎨' }
-];
-
-const DEFAULT_ITEMS = [
+const INITIAL_ITEMS = [
   { 
     id: '1', 
     name: 'สบู่ก้อน นกแก้ว', 
@@ -81,11 +76,11 @@ const DEFAULT_ITEMS = [
   }
 ];
 
-const DEFAULT_TRANSACTIONS = [
+const INITIAL_TRANSACTIONS = [
   {
     id: 't1',
     item_name: 'ยาสระผม Sunsilk',
-    user_name: 'User 1 (คุณสมชาย)',
+    user_name: 'คุณสมชาย',
     action_type: 'USE',
     qty_before: 2,
     qty_after: 1,
@@ -96,7 +91,7 @@ const DEFAULT_TRANSACTIONS = [
   {
     id: 't2',
     item_name: 'สบู่ก้อน นกแก้ว',
-    user_name: 'User 2 (คุณสมหญิง)',
+    user_name: 'คุณสมหญิง',
     action_type: 'ADD',
     qty_before: 1,
     qty_after: 3,
@@ -106,7 +101,7 @@ const DEFAULT_TRANSACTIONS = [
   }
 ];
 
-const DEFAULT_SHOPPING_LIST = [
+const INITIAL_SHOPPING_LIST = [
   { id: 's1', item_id: '5', item_name: 'ทิชชู่ม้วน (แพ็ค 6 ม้วน)', quantity_needed: 2, is_purchased: false, auto_added: true },
   { id: 's2', item_id: '2', item_name: 'ยาสระผม Sunsilk', quantity_needed: 1, is_purchased: false, auto_added: true }
 ];
@@ -117,7 +112,22 @@ export default function App() {
   // Real Account Session
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('meeyoo_current_user');
-    return saved ? JSON.parse(saved) : DEFAULT_MEMBERS[0];
+    return saved ? JSON.parse(saved) : {
+      id: 'u1',
+      name: 'คุณสมชาย',
+      email: 'user1@meeyoo.app',
+      role: 'เจ้าของบ้าน',
+      avatar: '👨‍💻'
+    };
+  });
+
+  // Dynamic Members List in Active House
+  const [members, setMembers] = useState(() => {
+    const saved = localStorage.getItem('meeyoo_house_members_v2');
+    return saved ? JSON.parse(saved) : [
+      { id: 'u1', name: 'คุณสมชาย', email: 'user1@meeyoo.app', role: 'เจ้าของบ้าน', avatar: '👨‍💻' },
+      { id: 'u2', name: 'คุณสมหญิง', email: 'user2@meeyoo.app', role: 'สมาชิก', avatar: '👩‍🎨' }
+    ];
   });
 
   // Auth Screen Flow: 'app' | 'login' | 'register' | 'join_home' | 'create_home'
@@ -135,17 +145,17 @@ export default function App() {
 
   const [items, setItems] = useState(() => {
     const saved = localStorage.getItem('meeyoo_items_v2');
-    return saved ? JSON.parse(saved) : DEFAULT_ITEMS;
+    return saved ? JSON.parse(saved) : INITIAL_ITEMS;
   });
 
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem('meeyoo_transactions_v2');
-    return saved ? JSON.parse(saved) : DEFAULT_TRANSACTIONS;
+    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
   });
 
   const [shoppingList, setShoppingList] = useState(() => {
     const saved = localStorage.getItem('meeyoo_shopping_v2');
-    return saved ? JSON.parse(saved) : DEFAULT_SHOPPING_LIST;
+    return saved ? JSON.parse(saved) : INITIAL_SHOPPING_LIST;
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,12 +223,28 @@ export default function App() {
     setTimeout(() => setConfettiParticles([]), 2600);
   };
 
+  // Sync Current User into Household Members list
+  useEffect(() => {
+    if (currentUser && currentUser.email) {
+      setMembers(prev => {
+        const exists = prev.some(m => m.email === currentUser.email);
+        if (!exists) {
+          const updated = [...prev, { ...currentUser, role: 'สมาชิกในบ้าน' }];
+          localStorage.setItem('meeyoo_house_members_v2', JSON.stringify(updated));
+          return updated;
+        }
+        return prev;
+      });
+    }
+  }, [currentUser]);
+
   useEffect(() => {
     localStorage.setItem('meeyoo_items_v2', JSON.stringify(items));
     localStorage.setItem('meeyoo_transactions_v2', JSON.stringify(transactions));
     localStorage.setItem('meeyoo_shopping_v2', JSON.stringify(shoppingList));
     localStorage.setItem('meeyoo_active_house_v2', JSON.stringify(house));
     localStorage.setItem('meeyoo_current_user', JSON.stringify(currentUser));
+    localStorage.setItem('meeyoo_house_members_v2', JSON.stringify(members));
 
     if (window.BroadcastChannel) {
       try {
@@ -227,13 +253,14 @@ export default function App() {
         bc.close();
       } catch (e) {}
     }
-  }, [items, transactions, shoppingList, house, currentUser]);
+  }, [items, transactions, shoppingList, house, currentUser, members]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'meeyoo_items_v2' && e.newValue) setItems(JSON.parse(e.newValue));
       if (e.key === 'meeyoo_transactions_v2' && e.newValue) setTransactions(JSON.parse(e.newValue));
       if (e.key === 'meeyoo_shopping_v2' && e.newValue) setShoppingList(JSON.parse(e.newValue));
+      if (e.key === 'meeyoo_house_members_v2' && e.newValue) setMembers(JSON.parse(e.newValue));
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -246,9 +273,11 @@ export default function App() {
           const i = localStorage.getItem('meeyoo_items_v2');
           const t = localStorage.getItem('meeyoo_transactions_v2');
           const s = localStorage.getItem('meeyoo_shopping_v2');
+          const m = localStorage.getItem('meeyoo_house_members_v2');
           if (i) setItems(JSON.parse(i));
           if (t) setTransactions(JSON.parse(t));
           if (s) setShoppingList(JSON.parse(s));
+          if (m) setMembers(JSON.parse(m));
         };
       } catch (e) {}
     }
@@ -577,7 +606,7 @@ export default function App() {
         <div className="blob blob-3"></div>
       </div>
 
-      {/* PRODUCTION HEADER NAVBAR (CLEAN PROFILE & ACTION CONTROLS) */}
+      {/* PRODUCTION HEADER NAVBAR */}
       <header className="sticky top-0 z-30 bg-[#faf8f5]/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-[#e8e4df] dark:border-slate-800 px-4 py-3 shadow-xs">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1092,7 +1121,7 @@ export default function App() {
 
             <div className="glass-card p-4">
               <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3 flex items-center justify-between">
-                <span>สมาชิกร่วมบ้าน ({DEFAULT_MEMBERS.length} คน)</span>
+                <span>สมาชิกร่วมบ้าน ({members.length} คน)</span>
                 <button 
                   onClick={handleSignOut}
                   className="text-xs text-rose-600 dark:text-rose-400 font-bold hover:underline flex items-center gap-1"
@@ -1102,9 +1131,9 @@ export default function App() {
               </h3>
 
               <div className="space-y-2">
-                {DEFAULT_MEMBERS.map((mem) => (
+                {members.map((mem) => (
                   <div key={mem.id} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
-                    <div className="text-2xl">{mem.avatar}</div>
+                    <div className="text-2xl">{mem.avatar || '👤'}</div>
                     <div className="flex-1">
                       <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
                         {mem.name}
@@ -1114,7 +1143,7 @@ export default function App() {
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email} • {mem.role}</div>
+                      <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email} • {mem.role || 'สมาชิก'}</div>
                     </div>
                   </div>
                 ))}
