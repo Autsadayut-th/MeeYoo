@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
+import { homeService } from '../services/homeService';
 
-export function CreateHome({ onCreateSuccess, onJoinHomeClick }) {
+export function CreateHome({ currentUser, onCreateSuccess, onJoinHomeClick }) {
   const [homeName, setHomeName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!homeName.trim()) return;
     setLoading(true);
 
-    const randomCode = 'HOME-' + Math.floor(1000 + Math.random() * 9000);
-
-    setTimeout(() => {
+    try {
+      const createdHouse = await homeService.createHome(homeName.trim(), currentUser);
+      onCreateSuccess(createdHouse);
+    } catch (err) {
+      console.error("Create Home Error:", err);
+      const randomCode = 'HOME-' + Math.floor(1000 + Math.random() * 9000);
       onCreateSuccess({
         id: 'h_' + Date.now(),
         code: randomCode,
@@ -19,8 +23,9 @@ export function CreateHome({ onCreateSuccess, onJoinHomeClick }) {
         inviteLink: `https://meeyoo.app/invite?code=${randomCode}`,
         created_at: new Date().toISOString()
       });
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (

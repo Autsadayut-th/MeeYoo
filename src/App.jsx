@@ -4,6 +4,7 @@ import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { JoinHome } from './pages/JoinHome';
 import { CreateHome } from './pages/CreateHome';
+import { homeService } from './services/homeService';
 
 const DEFAULT_HOUSE = {
   id: 'h_home_8829',
@@ -28,7 +29,12 @@ export default function App() {
     return savedUser ? 'app' : 'login';
   });
 
-  // Dynamic Members List in Active House (Only contains actual joined users)
+  const [house, setHouse] = useState(() => {
+    const saved = localStorage.getItem('meeyoo_active_house_v3');
+    return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
+  });
+
+  // Dynamic Members List in Active House
   const [members, setMembers] = useState(() => {
     const saved = localStorage.getItem('meeyoo_house_members_v3');
     return saved ? JSON.parse(saved) : [];
@@ -37,11 +43,6 @@ export default function App() {
   // Theme Mode State
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('meeyoo_theme') === 'dark';
-  });
-
-  const [house, setHouse] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_active_house_v3');
-    return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
   });
 
   // Real Production State: Strictly start EMPTY [] for all new logins/homes
@@ -125,24 +126,19 @@ export default function App() {
     setTimeout(() => setConfettiParticles([]), 2600);
   };
 
-  // Sync Current User into Household Members list
+  // Sync Members from Cloud or Active Session
   useEffect(() => {
-    if (currentUser && currentUser.email) {
-      setMembers(prev => {
-        const exists = prev.some(m => m.email === currentUser.email);
-        if (!exists) {
-          const userWithRole = { 
-            ...currentUser, 
-            role: currentUser.role || 'สมาชิก' 
-          };
-          const updated = [...prev, userWithRole];
-          localStorage.setItem('meeyoo_house_members_v3', JSON.stringify(updated));
-          return updated;
+    if (house && house.id) {
+      homeService.fetchMembers(house.id).then(fetched => {
+        if (fetched && fetched.length > 0) {
+          setMembers(fetched);
+        } else if (currentUser && currentUser.email) {
+          const userWithRole = { ...currentUser, role: currentUser.role || 'เจ้าของบ้าน' };
+          setMembers([userWithRole]);
         }
-        return prev;
       });
     }
-  }, [currentUser]);
+  }, [house, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('meeyoo_items_v3', JSON.stringify(items));
@@ -511,11 +507,11 @@ export default function App() {
   }
 
   if (authView === 'join_home') {
-    return <JoinHome onJoinedSuccess={handleHomeJoined} onCreateHomeClick={() => setAuthView('create_home')} />;
+    return <JoinHome currentUser={currentUser} onJoinedSuccess={handleHomeJoined} onCreateHomeClick={() => setAuthView('create_home')} />;
   }
 
   if (authView === 'create_home') {
-    return <CreateHome onCreateSuccess={handleHomeCreated} onJoinHomeClick={() => setAuthView('join_home')} />;
+    return <CreateHome currentUser={currentUser} onCreateSuccess={handleHomeCreated} onJoinHomeClick={() => setAuthView('join_home')} />;
   }
 
   if (authView === 'login' || !currentUser) {
@@ -1091,18 +1087,18 @@ export default function App() {
                   <p className="text-xs text-stone-400 dark:text-slate-500 py-2">ยังไม่มีข้อมูลสมาชิก</p>
                 ) : (
                   members.map((mem) => (
-                    <div key={mem.id || mem.email} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
+                    <div key={mem.id || mem.email || mem.user_email} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
                       <div className="text-2xl">{mem.avatar || '👤'}</div>
                       <div className="flex-1">
                         <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
-                          {mem.name}
-                          {mem.email === currentUser?.email && (
+                          {mem.name || mem.user_name}
+                          {(mem.email === currentUser?.email || mem.user_email === currentUser?.email) && (
                             <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
                               บัญชีของคุณ ({mem.role || 'เจ้าของบ้าน'})
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email} • {mem.role || 'สมาชิก'}</div>
+                        <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email || mem.user_email} • {mem.role || 'สมาชิก'}</div>
                       </div>
                     </div>
                   ))
@@ -1278,7 +1274,7 @@ export default function App() {
                     min="0"
                     value={formQuantity}
                     onChange={e => setFormQuantity(e.target.value)}
-                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     required
                   />
                 </div>
@@ -1290,7 +1286,7 @@ export default function App() {
                     min="1"
                     value={formMinThreshold}
                     onChange={e => setFormMinThreshold(e.target.value)}
-                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     required
                   />
                 </div>

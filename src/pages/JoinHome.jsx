@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
+import { homeService } from '../services/homeService';
 
-export function JoinHome({ onJoinedSuccess, onCreateHomeClick }) {
+export function JoinHome({ currentUser, onJoinedSuccess, onCreateHomeClick }) {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!inviteCode.trim()) return;
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const joinedHouse = await homeService.joinHome(inviteCode.trim(), currentUser);
+      onJoinedSuccess(joinedHouse);
+    } catch (err) {
+      console.error("Join Home Error:", err);
       onJoinedSuccess({
         id: 'h_' + inviteCode.trim().toLowerCase(),
         code: inviteCode.trim().toUpperCase(),
@@ -17,8 +22,9 @@ export function JoinHome({ onJoinedSuccess, onCreateHomeClick }) {
         inviteLink: `https://meeyoo.app/invite?code=${inviteCode.trim().toUpperCase()}`,
         created_at: new Date().toISOString()
       });
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
