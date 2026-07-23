@@ -13,99 +13,6 @@ const DEFAULT_HOUSE = {
   created_at: new Date().toISOString()
 };
 
-const INITIAL_ITEMS = [
-  { 
-    id: '1', 
-    name: 'สบู่ก้อน นกแก้ว', 
-    category: 'ของใช้ส่วนตัว', 
-    quantity: 2, 
-    unit: 'ก้อน', 
-    min_threshold: 1, 
-    icon: '🧼',
-    barcode: '885000000001',
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    updated_at: new Date(Date.now() - 3600000 * 3).toISOString()
-  },
-  { 
-    id: '2', 
-    name: 'ยาสระผม Sunsilk', 
-    category: 'ของใช้ส่วนตัว', 
-    quantity: 1, 
-    unit: 'ขวด', 
-    min_threshold: 1, 
-    icon: '🧴',
-    barcode: '885000000002',
-    created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
-    updated_at: new Date(Date.now() - 3600000 * 2).toISOString()
-  },
-  { 
-    id: '3', 
-    name: 'โลชั่นทาผิว Nivea', 
-    category: 'ของใช้ส่วนตัว', 
-    quantity: 2, 
-    unit: 'ขวด', 
-    min_threshold: 1, 
-    icon: '🧴',
-    barcode: '885000000003',
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-    updated_at: new Date(Date.now() - 3600000 * 4).toISOString()
-  },
-  { 
-    id: '4', 
-    name: 'ครีมบำรุงผิวหน้า', 
-    category: 'ของใช้ส่วนตัว', 
-    quantity: 2, 
-    unit: 'กระปุก', 
-    min_threshold: 1, 
-    icon: '✨',
-    barcode: '885000000004',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updated_at: new Date(Date.now() - 3600000 * 1).toISOString()
-  },
-  { 
-    id: '5', 
-    name: 'ทิชชู่ม้วน (แพ็ค 6 ม้วน)', 
-    category: 'ของใช้ในบ้าน', 
-    quantity: 0, 
-    unit: 'แพ็ค', 
-    min_threshold: 2, 
-    icon: '🧻',
-    barcode: '885000000005',
-    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
-    updated_at: new Date(Date.now() - 1800000).toISOString()
-  }
-];
-
-const INITIAL_TRANSACTIONS = [
-  {
-    id: 't1',
-    item_name: 'ยาสระผม Sunsilk',
-    user_name: 'คุณสมชาย',
-    action_type: 'USE',
-    qty_before: 2,
-    qty_after: 1,
-    change_amount: -1,
-    note: 'กดปุ่ม "ใช้ 1"',
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString()
-  },
-  {
-    id: 't2',
-    item_name: 'สบู่ก้อน นกแก้ว',
-    user_name: 'คุณสมหญิง',
-    action_type: 'ADD',
-    qty_before: 1,
-    qty_after: 3,
-    change_amount: 2,
-    note: 'ซื้อมาเติมเพิ่ม 2 ก้อน',
-    created_at: new Date(Date.now() - 3600000 * 5).toISOString()
-  }
-];
-
-const INITIAL_SHOPPING_LIST = [
-  { id: 's1', item_id: '5', item_name: 'ทิชชู่ม้วน (แพ็ค 6 ม้วน)', quantity_needed: 2, is_purchased: false, auto_added: true },
-  { id: 's2', item_id: '2', item_name: 'ยาสระผม Sunsilk', quantity_needed: 1, is_purchased: false, auto_added: true }
-];
-
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -121,13 +28,10 @@ export default function App() {
     return savedUser ? 'app' : 'login';
   });
 
-  // Dynamic Members List in Active House
+  // Dynamic Members List in Active House (Empty slate for real production users)
   const [members, setMembers] = useState(() => {
     const saved = localStorage.getItem('meeyoo_house_members_v2');
-    return saved ? JSON.parse(saved) : [
-      { id: 'u1', name: 'คุณสมชาย', email: 'user1@meeyoo.app', role: 'เจ้าของบ้าน', avatar: '👨‍💻' },
-      { id: 'u2', name: 'คุณสมหญิง', email: 'user2@meeyoo.app', role: 'สมาชิก', avatar: '👩‍🎨' }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Theme Mode State
@@ -140,19 +44,20 @@ export default function App() {
     return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
   });
 
+  // Real Production State: Start empty [] for clean household setup
   const [items, setItems] = useState(() => {
     const saved = localStorage.getItem('meeyoo_items_v2');
-    return saved ? JSON.parse(saved) : INITIAL_ITEMS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem('meeyoo_transactions_v2');
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [shoppingList, setShoppingList] = useState(() => {
     const saved = localStorage.getItem('meeyoo_shopping_v2');
-    return saved ? JSON.parse(saved) : INITIAL_SHOPPING_LIST;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -738,55 +643,68 @@ export default function App() {
               </div>
 
               <div className="space-y-3">
-                {items.slice(0, 5).map(item => {
-                  const isOut = item.quantity === 0;
-                  const isLow = item.quantity <= item.min_threshold && !isOut;
-                  const gaugePct = Math.min(100, Math.round((item.quantity / (item.min_threshold * 2)) * 100));
+                {items.length === 0 ? (
+                  <div className="py-8 text-center text-stone-400 dark:text-slate-500 space-y-2">
+                    <i className="fa-solid fa-box-open text-3xl text-stone-300 dark:text-slate-600"></i>
+                    <p className="text-xs">ยังไม่มีสินค้าในบ้านหลังนี้</p>
+                    <button 
+                      onClick={() => { resetForm(); setShowAddModal(true); }}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      + กดเพิ่มสินค้าใหม่เข้าคลัง
+                    </button>
+                  </div>
+                ) : (
+                  items.slice(0, 5).map(item => {
+                    const isOut = item.quantity === 0;
+                    const isLow = item.quantity <= item.min_threshold && !isOut;
+                    const gaugePct = Math.min(100, Math.round((item.quantity / (item.min_threshold * 2)) * 100));
 
-                  return (
-                    <div key={item.id} className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0 shadow-xs">
-                            {item.icon || '📦'}
-                          </div>
-                          <div className="overflow-hidden">
-                            <div className="font-bold text-sm text-stone-900 dark:text-white truncate">{item.name}</div>
-                            <div className="text-[11px] text-stone-500 dark:text-slate-400 flex items-center gap-2">
-                              <span>{item.category}</span>
-                              <span className={`px-1.5 py-0.2 rounded-full font-bold text-[10px] ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
-                                {isOut ? '🔴 หมด' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
-                              </span>
+                    return (
+                      <div key={item.id} className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0 shadow-xs">
+                              {item.icon || '📦'}
+                            </div>
+                            <div className="overflow-hidden">
+                              <div className="font-bold text-sm text-stone-900 dark:text-white truncate">{item.name}</div>
+                              <div className="text-[11px] text-stone-500 dark:text-slate-400 flex items-center gap-2">
+                                <span>{item.category}</span>
+                                <span className={`px-1.5 py-0.2 rounded-full font-bold text-[10px] ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
+                                  {isOut ? '🔴 หมด' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="text-right">
-                            <span className="font-heading font-extrabold text-lg text-stone-900 dark:text-white">{item.quantity}</span>
-                            <span className="text-xs text-stone-500 dark:text-slate-400 ml-1">{item.unit}</span>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-right">
+                              <span className="font-heading font-extrabold text-lg text-stone-900 dark:text-white">{item.quantity}</span>
+                              <span className="text-xs text-stone-500 dark:text-slate-400 ml-1">{item.unit}</span>
+                            </div>
+
+                            <button 
+                              onClick={() => handleQuickUseOne(item)}
+                              disabled={isOut}
+                              className="btn-use-one text-xs px-3 py-1.5"
+                            >
+                              <i className="fa-solid fa-hand-holding"></i> ใช้ 1
+                            </button>
                           </div>
+                        </div>
 
-                          <button 
-                            onClick={() => handleQuickUseOne(item)}
-                            disabled={isOut}
-                            className="btn-use-one text-xs px-3 py-1.5"
-                          >
-                            <i className="fa-solid fa-hand-holding"></i> ใช้ 1
-                          </button>
+                        {/* VISUAL PROGRESS GAUGE BAR */}
+                        <div className="w-full bg-stone-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${gaugePct}%` }}
+                          />
                         </div>
                       </div>
-
-                      {/* VISUAL PROGRESS GAUGE BAR */}
-                      <div className="w-full bg-stone-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-500 ${isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                          style={{ width: `${gaugePct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -832,7 +750,7 @@ export default function App() {
               {filteredItems.length === 0 ? (
                 <div className="glass-card p-8 text-center text-stone-400 space-y-2">
                   <i className="fa-solid fa-box-open text-3xl text-stone-400"></i>
-                  <p className="text-sm">ไม่พบรายการสินค้าที่ค้นหา</p>
+                  <p className="text-sm">ยังไม่มีรายการสินค้าในคลัง</p>
                   <button 
                     onClick={() => { resetForm(); setShowAddModal(true); }}
                     className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
@@ -1051,7 +969,7 @@ export default function App() {
 
             <div className="relative pl-5 border-l-2 border-stone-200 dark:border-slate-700 space-y-4">
               {transactions.length === 0 ? (
-                <p className="text-xs text-stone-400 dark:text-slate-500 py-3">ยังไม่มีบันทึกประวัติกิจกรรม</p>
+                <p className="text-xs text-stone-400 dark:text-slate-500 py-3">ยังไม่มีบันทึกประวัติกิจกรรมในบ้านนี้</p>
               ) : (
                 transactions.map(tx => {
                   const isAdd = tx.action_type === 'ADD' || tx.action_type === 'RESTOCK';
