@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('meeyoo_sb_url') || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('meeyoo_sb_key') || '';
+// Production Automatic Supabase Credentials from Environment Variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://meeyoo-demo.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_key';
 
-export const supabase = (supabaseUrl && supabaseKey) 
-  ? createClient(supabaseUrl, supabaseKey) 
-  : null;
+export const supabase = createClient(supabaseUrl, supabaseKey);

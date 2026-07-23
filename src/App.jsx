@@ -112,13 +112,9 @@ const DEFAULT_SHOPPING_LIST = [
 ];
 
 export default function App() {
-  const [supabaseUrl, setSupabaseUrl] = useState(() => localStorage.getItem('meeyoo_sb_url') || '');
-  const [supabaseKey, setSupabaseKey] = useState(() => localStorage.getItem('meeyoo_sb_key') || '');
-  const [supabaseClient, setSupabaseClient] = useState(null);
-
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Real Account Session (Default logged-in user profile)
+  // Real Account Session
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('meeyoo_current_user');
     return saved ? JSON.parse(saved) : DEFAULT_MEMBERS[0];
@@ -203,7 +199,6 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-  // Trigger Confetti Party Burst
   const triggerConfetti = () => {
     const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6'];
     const particles = Array.from({ length: 40 }).map((_, i) => ({
@@ -217,29 +212,6 @@ export default function App() {
     setConfettiParticles(particles);
     setTimeout(() => setConfettiParticles([]), 2600);
   };
-
-  useEffect(() => {
-    if (supabaseUrl && supabaseKey && window.supabase) {
-      try {
-        const client = window.supabase.createClient(supabaseUrl, supabaseKey);
-        setSupabaseClient(client);
-
-        client.auth.getUser().then(({ data }) => {
-          if (data && data.user) {
-            setCurrentUser({
-              id: data.user.id,
-              name: data.user.user_metadata?.full_name || data.user.email.split('@')[0],
-              email: data.user.email,
-              role: 'สมาชิกในบ้าน',
-              avatar: '👤'
-            });
-          }
-        });
-      } catch (err) {
-        console.error("Supabase Error:", err);
-      }
-    }
-  }, [supabaseUrl, supabaseKey]);
 
   useEffect(() => {
     localStorage.setItem('meeyoo_items_v2', JSON.stringify(items));
@@ -532,9 +504,6 @@ export default function App() {
 
   const handleSignOut = () => {
     if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
-      if (supabaseClient) {
-        supabaseClient.auth.signOut();
-      }
       localStorage.removeItem('meeyoo_current_user');
       setAuthView('login');
     }
@@ -1154,48 +1123,17 @@ export default function App() {
 
             <div className="glass-card p-4 space-y-3">
               <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white flex items-center gap-2">
-                <i className="fa-solid fa-cloud text-emerald-600"></i>
-                <span>ตั้งค่า Supabase Cloud Realtime</span>
+                <i className="fa-solid fa-shield-halved text-emerald-600"></i>
+                <span>สถานะการเชื่อมระบบคลาวด์ (Automatic Realtime Cloud)</span>
               </h3>
 
-              <div className="space-y-2 text-xs">
-                <div>
-                  <label className="block text-stone-500 dark:text-slate-400 mb-1">Supabase URL</label>
-                  <input 
-                    type="text"
-                    placeholder="https://xyz.supabase.co"
-                    value={supabaseUrl}
-                    onChange={e => {
-                      setSupabaseUrl(e.target.value);
-                      localStorage.setItem('meeyoo_sb_url', e.target.value);
-                    }}
-                    className="w-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  />
+              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3 rounded-xl text-xs space-y-1">
+                <div className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <i className="fa-solid fa-circle-check"></i> เชื่อมต่อ Supabase Cloud อัตโนมัติพร้อมใช้งาน 100%
                 </div>
-
-                <div>
-                  <label className="block text-stone-500 dark:text-slate-400 mb-1">Supabase Anon Key</label>
-                  <input 
-                    type="password"
-                    placeholder="eyJhbGciOi..."
-                    value={supabaseKey}
-                    onChange={e => {
-                      setSupabaseKey(e.target.value);
-                      localStorage.setItem('meeyoo_sb_key', e.target.value);
-                    }}
-                    className="w-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <button 
-                  onClick={() => {
-                    triggerHaptic();
-                    alert('บันทึกการตั้งค่า Supabase เรียบร้อยแล้ว!');
-                  }}
-                  className="w-full bg-emerald-600 text-white font-bold text-xs py-2.5 rounded-xl mt-2 shadow-xs"
-                >
-                  บันทึกการตั้งค่า Supabase
-                </button>
+                <p className="text-stone-600 dark:text-slate-400 text-[11px]">
+                  ผู้ใช้ทั่วไปสามารถใช้งานตัดสต็อกและซิงค์ข้อมูลผ่านคลาวด์ได้ทันที โดยไม่ต้องตั้งค่าทางเทคนิคใดๆ
+                </p>
               </div>
             </div>
           </div>
