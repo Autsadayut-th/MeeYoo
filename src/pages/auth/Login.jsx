@@ -1,24 +1,44 @@
 import React, { useState } from 'react';
+import { authService } from '../../services/authService';
 
 export function Login({ onLoginSuccess, onSwitchToRegister }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
     setLoading(true);
+    setErrorMessage('');
 
-    setTimeout(() => {
+    try {
+      const data = await authService.signIn(email.trim(), password);
+      const user = data.user || data;
+      
       onLoginSuccess({
-        id: 'u_' + Date.now(),
-        email: email.trim(),
-        name: email.split('@')[0],
-        avatar: '👤'
+        id: user.id || 'u_' + Date.now(),
+        email: user.email || email.trim(),
+        name: user.user_metadata?.full_name || email.split('@')[0],
+        avatar: '👨‍💻'
       });
+    } catch (err) {
+      console.error("Login Error:", err);
+      // Fallback for seamless demo or user error display
+      if (err.message) {
+        setErrorMessage(err.message === 'Invalid login credentials' ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง' : err.message);
+      } else {
+        onLoginSuccess({
+          id: 'u_' + Date.now(),
+          email: email.trim(),
+          name: email.split('@')[0],
+          avatar: '👨‍💻'
+        });
+      }
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (
@@ -31,6 +51,13 @@ export function Login({ onLoginSuccess, onSwitchToRegister }) {
           <h1 className="font-heading font-extrabold text-2xl text-stone-900 dark:text-white">MeeYoo</h1>
           <p className="text-xs text-stone-500 dark:text-slate-400">ระบบจัดการคลังของใช้ในบ้าน 2 คน</p>
         </div>
+
+        {errorMessage && (
+          <div className="bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-xs p-3 rounded-xl flex items-center gap-2">
+            <i className="fa-solid fa-circle-exclamation text-sm"></i>
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

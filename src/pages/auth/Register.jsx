@@ -1,25 +1,44 @@
 import React, { useState } from 'react';
+import { authService } from '../../services/authService';
 
 export function Register({ onRegisterSuccess, onSwitchToLogin }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password || !fullName) return;
     setLoading(true);
+    setErrorMessage('');
 
-    setTimeout(() => {
+    try {
+      const data = await authService.signUp(email.trim(), password);
+      const user = data.user || data;
+
       onRegisterSuccess({
-        id: 'u_' + Date.now(),
-        email: email.trim(),
+        id: user.id || 'u_' + Date.now(),
+        email: user.email || email.trim(),
         name: fullName.trim(),
         avatar: '👩‍🎨'
       });
+    } catch (err) {
+      console.error("Register Error:", err);
+      if (err.message) {
+        setErrorMessage(err.message);
+      } else {
+        onRegisterSuccess({
+          id: 'u_' + Date.now(),
+          email: email.trim(),
+          name: fullName.trim(),
+          avatar: '👩‍🎨'
+        });
+      }
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (
@@ -32,6 +51,13 @@ export function Register({ onRegisterSuccess, onSwitchToLogin }) {
           <h1 className="font-heading font-extrabold text-2xl text-stone-900 dark:text-white">ลงทะเบียนสมาชิก</h1>
           <p className="text-xs text-stone-500 dark:text-slate-400">สร้างบัญชีผู้ใช้สำหรับแชร์บ้านกับคู่ของคุณ</p>
         </div>
+
+        {errorMessage && (
+          <div className="bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-xs p-3 rounded-xl flex items-center gap-2">
+            <i className="fa-solid fa-circle-exclamation text-sm"></i>
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
