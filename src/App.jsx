@@ -146,6 +146,13 @@ export default function App() {
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
 
+  // Trigger tactile vibration on mobile
+  const triggerHaptic = () => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(35);
+    }
+  };
+
   useEffect(() => {
     if (supabaseUrl && supabaseKey && window.supabase) {
       try {
@@ -235,6 +242,7 @@ export default function App() {
 
   const handleQuickUseOne = (item) => {
     if (item.quantity <= 0) return;
+    triggerHaptic();
     const newQty = item.quantity - 1;
     
     setItems(prev => prev.map(i => i.id === item.id ? { 
@@ -248,6 +256,7 @@ export default function App() {
 
   const handleUpdateQuantity = (item, delta) => {
     if (delta < 0 && item.quantity <= 0) return;
+    triggerHaptic();
     const newQty = Math.max(0, item.quantity + delta);
 
     setItems(prev => prev.map(i => i.id === item.id ? { 
@@ -267,6 +276,7 @@ export default function App() {
   };
 
   const handleDeleteItem = (item) => {
+    triggerHaptic();
     if (confirm(`คุณต้องการลบรายการ "${item.name}" ออกจากคลังสินค้าหรือไม่?`)) {
       setItems(prev => prev.filter(i => i.id !== item.id));
       recordTransaction(item.name, 'DELETE', item.quantity, 0, -item.quantity, 'ลบสินค้าออกจากระบบ');
@@ -276,6 +286,7 @@ export default function App() {
   const handleSaveItemForm = (e) => {
     e.preventDefault();
     if (!formName.trim()) return;
+    triggerHaptic();
 
     if (editingItem) {
       const newQty = Number(formQuantity);
@@ -336,6 +347,7 @@ export default function App() {
   const handleAddManualShopping = (e) => {
     e.preventDefault();
     if (!shopItemName.trim()) return;
+    triggerHaptic();
 
     const newShopItem = {
       id: 'manual_' + Date.now(),
@@ -351,10 +363,12 @@ export default function App() {
   };
 
   const toggleShoppingPurchased = (id) => {
+    triggerHaptic();
     setShoppingList(prev => prev.map(s => s.id === id ? { ...s, is_purchased: !s.is_purchased } : s));
   };
 
   const handleRestockPurchased = (shopItem) => {
+    triggerHaptic();
     const existing = items.find(i => i.id === shopItem.item_id || i.name.toLowerCase() === shopItem.item_name.toLowerCase());
 
     if (existing) {
@@ -420,7 +434,6 @@ export default function App() {
         <div className="blob blob-3"></div>
       </div>
 
-      {/* MOBILE TOP HEADER BAR */}
       <header className="sticky top-0 z-30 bg-[#faf8f5]/90 backdrop-blur-xl border-b border-[#e8e4df] px-4 py-3 shadow-xs">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -443,13 +456,13 @@ export default function App() {
 
           <div className="flex items-center bg-stone-100 border border-stone-200 rounded-full p-1 shadow-inner">
             <button 
-              onClick={() => setActiveUserIndex(0)}
+              onClick={() => { triggerHaptic(); setActiveUserIndex(0); }}
               className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 0 ? 'bg-emerald-600 text-white shadow' : 'text-stone-500'}`}
             >
               👨‍💻 U1
             </button>
             <button 
-              onClick={() => setActiveUserIndex(1)}
+              onClick={() => { triggerHaptic(); setActiveUserIndex(1); }}
               className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 1 ? 'bg-amber-600 text-white shadow' : 'text-stone-500'}`}
             >
               👩‍🎨 U2
@@ -458,7 +471,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
       <main className="max-w-4xl mx-auto px-4 pt-4">
         {activeTab === 'dashboard' && (
           <div className="space-y-5">
@@ -473,6 +485,7 @@ export default function App() {
 
               <button 
                 onClick={() => {
+                  triggerHaptic();
                   navigator.clipboard.writeText(house.code);
                   alert(`คัดลอกรหัสเชิญ ${house.code} เรียบร้อย!`);
                 }}
@@ -527,7 +540,7 @@ export default function App() {
                   <span>รายการสินค้าในบ้าน</span>
                 </h3>
                 <button 
-                  onClick={() => setActiveTab('stock')}
+                  onClick={() => { triggerHaptic(); setActiveTab('stock'); }}
                   className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
                 >
                   ดูทั้งหมด ({items.length}) <i className="fa-solid fa-chevron-right text-[10px] ml-0.5"></i>
@@ -597,7 +610,7 @@ export default function App() {
                 {categoriesList.map(cat => (
                   <button
                     key={cat}
-                    onClick={() => setSelectedCategory(cat)}
+                    onClick={() => { triggerHaptic(); setSelectedCategory(cat); }}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition ${selectedCategory === cat ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' : 'bg-white border-stone-200 text-stone-600'}`}
                   >
                     {cat === 'ALL' ? 'ทุกหมวดหมู่' : cat}
@@ -846,6 +859,7 @@ export default function App() {
                 </div>
                 <button 
                   onClick={() => {
+                    triggerHaptic();
                     navigator.clipboard.writeText(house.code);
                     alert(`คัดลอกรหัสเชิญ ${house.code} เรียบร้อย!`);
                   }}
@@ -917,7 +931,10 @@ export default function App() {
                 </div>
 
                 <button 
-                  onClick={() => alert('บันทึกการตั้งค่า Supabase เรียบร้อยแล้ว!')}
+                  onClick={() => {
+                    triggerHaptic();
+                    alert('บันทึกการตั้งค่า Supabase เรียบร้อยแล้ว!');
+                  }}
                   className="w-full bg-emerald-600 text-white font-bold text-xs py-2.5 rounded-xl mt-2 shadow-xs"
                 >
                   บันทึกการตั้งค่า Supabase
@@ -928,20 +945,18 @@ export default function App() {
         )}
       </main>
 
-      {/* FLOATING ACTION BUTTON */}
       <button 
-        onClick={() => { resetForm(); setShowAddModal(true); }}
+        onClick={() => { triggerHaptic(); resetForm(); setShowAddModal(true); }}
         className="fixed right-5 bottom-20 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-600 text-white text-2xl shadow-xl shadow-emerald-600/30 flex items-center justify-center active:scale-95 transition"
         title="เพิ่มสินค้าใหม่เข้าคลัง"
       >
         <i className="fa-solid fa-plus"></i>
       </button>
 
-      {/* BOTTOM NAV */}
       <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 pb-safe">
         <div className="max-w-md mx-auto grid grid-cols-5 h-16">
           <button 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { triggerHaptic(); setActiveTab('dashboard'); }}
             className={`bottom-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
           >
             <i className="fa-solid fa-chart-pie text-lg mb-1"></i>
@@ -949,7 +964,7 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('stock')}
+            onClick={() => { triggerHaptic(); setActiveTab('stock'); }}
             className={`bottom-nav-item ${activeTab === 'stock' ? 'active' : ''}`}
           >
             <i className="fa-solid fa-boxes-stacked text-lg mb-1"></i>
@@ -957,7 +972,7 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('shopping')}
+            onClick={() => { triggerHaptic(); setActiveTab('shopping'); }}
             className={`bottom-nav-item ${activeTab === 'shopping' ? 'active' : ''}`}
           >
             <div className="relative">
@@ -972,7 +987,7 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('history')}
+            onClick={() => { triggerHaptic(); setActiveTab('history'); }}
             className={`bottom-nav-item ${activeTab === 'history' ? 'active' : ''}`}
           >
             <i className="fa-solid fa-clock-rotate-left text-lg mb-1"></i>
@@ -980,7 +995,7 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('members')}
+            onClick={() => { triggerHaptic(); setActiveTab('members'); }}
             className={`bottom-nav-item ${activeTab === 'members' || activeTab === 'settings' ? 'active' : ''}`}
           >
             <i className="fa-solid fa-users text-lg mb-1"></i>
@@ -989,7 +1004,6 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ADD / EDIT MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
           <div className="glass-card bg-white border border-stone-200 p-5 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto pb-safe">
