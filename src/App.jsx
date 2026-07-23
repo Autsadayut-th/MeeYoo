@@ -164,11 +164,14 @@ export default function App() {
 
   // Touch Swipe Gesture Refs
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const touchCurrentItem = useRef(null);
 
   const triggerHaptic = (pattern = 35) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(pattern);
+      try {
+        navigator.vibrate(pattern);
+      } catch (e) {}
     }
   };
 
@@ -222,9 +225,11 @@ export default function App() {
     localStorage.setItem('meeyoo_active_house_v2', JSON.stringify(house));
 
     if (window.BroadcastChannel) {
-      const bc = new BroadcastChannel('meeyoo_realtime_sync_v2');
-      bc.postMessage({ type: 'DATA_SYNC' });
-      bc.close();
+      try {
+        const bc = new BroadcastChannel('meeyoo_realtime_sync_v2');
+        bc.postMessage({ type: 'DATA_SYNC' });
+        bc.close();
+      } catch (e) {}
     }
   }, [items, transactions, shoppingList, house]);
 
@@ -239,15 +244,17 @@ export default function App() {
 
     let bc = null;
     if (window.BroadcastChannel) {
-      bc = new BroadcastChannel('meeyoo_realtime_sync_v2');
-      bc.onmessage = () => {
-        const i = localStorage.getItem('meeyoo_items_v2');
-        const t = localStorage.getItem('meeyoo_transactions_v2');
-        const s = localStorage.getItem('meeyoo_shopping_v2');
-        if (i) setItems(JSON.parse(i));
-        if (t) setTransactions(JSON.parse(t));
-        if (s) setShoppingList(JSON.parse(s));
-      };
+      try {
+        bc = new BroadcastChannel('meeyoo_realtime_sync_v2');
+        bc.onmessage = () => {
+          const i = localStorage.getItem('meeyoo_items_v2');
+          const t = localStorage.getItem('meeyoo_transactions_v2');
+          const s = localStorage.getItem('meeyoo_shopping_v2');
+          if (i) setItems(JSON.parse(i));
+          if (t) setTransactions(JSON.parse(t));
+          if (s) setShoppingList(JSON.parse(s));
+        };
+      } catch (e) {}
     }
 
     return () => {
@@ -334,25 +341,25 @@ export default function App() {
     }
   };
 
-  // Touch Swipe Gesture Handlers
+  // Touch Swipe Gesture Handlers (Fixed to prevent accidental swipes on vertical scroll)
   const handleTouchStart = (e, item) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
     touchCurrentItem.current = item;
   };
 
   const handleTouchEnd = (e) => {
     if (!touchCurrentItem.current) return;
     const diffX = e.changedTouches[0].clientX - touchStartX.current;
+    const diffY = e.changedTouches[0].clientY - touchStartY.current;
     
-    // Swipe Right Trigger "ใช้ 1"
-    if (diffX > 75) {
-      if (touchCurrentItem.current.quantity > 0) {
+    // Only trigger horizontal swipe if movement is predominantly horizontal
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 80) {
+      if (diffX > 80 && touchCurrentItem.current.quantity > 0) {
         handleQuickUseOne(touchCurrentItem.current);
+      } else if (diffX < -80) {
+        openEditModal(touchCurrentItem.current);
       }
-    }
-    // Swipe Left Trigger Edit Modal
-    else if (diffX < -75) {
-      openEditModal(touchCurrentItem.current);
     }
 
     touchCurrentItem.current = null;
@@ -553,7 +560,7 @@ export default function App() {
       </div>
 
       {/* HEADER NAVBAR WITH THEME TOGGLE */}
-      <header className="sticky top-0 z-30 bg-var(--bg-card) backdrop-blur-xl border-b border-var(--border-color) px-4 py-3 shadow-xs">
+      <header className="sticky top-0 z-30 bg-[#faf8f5]/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-[#e8e4df] dark:border-slate-800 px-4 py-3 shadow-xs">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white text-lg shadow-md shadow-emerald-600/20 shrink-0">
@@ -561,10 +568,10 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-heading font-extrabold text-var(--text-main) text-base leading-tight">MeeYoo</span>
+                <span className="font-heading font-extrabold text-stone-900 dark:text-white text-base leading-tight">MeeYoo</span>
                 <div className="pulse-emerald" title="Real-time Sync Active"></div>
               </div>
-              <div className="text-xs text-var(--text-muted) font-medium flex items-center gap-1">
+              <div className="text-xs text-stone-500 dark:text-slate-400 font-medium flex items-center gap-1">
                 <span>{house.name}</span>
                 <span className="text-[10px] bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 px-1.5 py-0.2 rounded font-mono">
                   {house.code}
