@@ -5,16 +5,8 @@
 /* Light Theme Variables */
 :root {
   --bg-primary: #faf8f5;
-  --bg-secondary: #f4efe8;
   --bg-card: #ffffff;
-  --bg-input: #f5f2eb;
   --border-color: #e8e4df;
-  --border-hover: #059669;
-
-  --accent-bamboo: #059669;
-  --accent-terracotta: #d97706;
-  --accent-coral: #e11d48;
-
   --text-main: #1c1917;
   --text-muted: #78716c;
 }
@@ -22,12 +14,8 @@
 /* Warm Midnight Dark Mode Variables */
 .dark {
   --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
   --bg-card: #1e293b;
-  --bg-input: #0f172a;
   --border-color: #334155;
-  --border-hover: #10b981;
-
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
 }
@@ -83,13 +71,13 @@ button:active, .clickable:active {
   animation: blobFloat 25s infinite ease-in-out alternate;
 }
 
-.dark .blob-1 { background: #1e1b4b; }
-.dark .blob-2 { background: #064e3b; }
-.dark .blob-3 { background: #450a0a; }
-
 .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #fef3c7; }
 .blob-2 { bottom: -10%; right: -10%; width: 420px; height: 420px; background: #d1fae5; animation-delay: -9s; }
 .blob-3 { top: 40%; left: 50%; width: 320px; height: 320px; background: #fee2e2; animation-delay: -16s; }
+
+.dark .blob-1 { background: #1e1b4b; }
+.dark .blob-2 { background: #064e3b; }
+.dark .blob-3 { background: #450a0a; }
 
 @keyframes blobFloat {
   0% { transform: translate(0, 0) scale(1); }
@@ -181,7 +169,7 @@ button:active, .clickable:active {
   width: 42px;
   height: 42px;
   border-radius: 0.85rem;
-  background: var(--bg-input);
+  background: #f5f2eb;
   border: 1px solid var(--border-color);
   color: var(--text-main);
   font-weight: 700;
@@ -191,6 +179,10 @@ button:active, .clickable:active {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+}
+
+.dark .stepper-btn {
+  background: #0f172a;
 }
 
 .stepper-btn:active:not(:disabled) {
@@ -242,6 +234,10 @@ button:active, .clickable:active {
   height: 3px;
   background: #059669;
   border-radius: 9999px;
+}
+
+.dark .bottom-nav-item.active::after {
+  background: #34d399;
 }
 
 .pulse-emerald {
