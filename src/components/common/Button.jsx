@@ -1,5 +1,14 @@
 import React from 'react';
 
+/**
+ * Button Component - ปุ่มกดมาตรฐานประจำระบบ MeeYoo
+ * 
+ * @param {React.ReactNode} children - ข้อความหรือไอคอนภายในปุ่ม
+ * @param {Function} onClick - ฟังก์ชันทำงานเมื่อคลิกปุ่ม
+ * @param {'primary' | 'emerald' | 'amber' | 'danger' | 'ghost'} variant - รูปแบบสีปุ่ม
+ * @param {'sm' | 'md' | 'lg'} size - ขนาดของปุ่ม
+ * @param {string} className - คลาส CSS เพิ่มเติม
+ */
 export function Button({ children, onClick, variant = 'primary', size = 'md', className = '', ...props }) {
   const base = "font-bold rounded-xl transition duration-200 flex items-center justify-center gap-2 active:scale-95";
   const variants = {
