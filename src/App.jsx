@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { BarcodeScannerModal } from './components/stock/BarcodeScannerModal';
 
 const DEFAULT_HOUSE = {
   id: 'h_home_8829',
@@ -22,6 +23,7 @@ const DEFAULT_ITEMS = [
     unit: 'ก้อน', 
     min_threshold: 1, 
     icon: '🧼',
+    barcode: '885000000001',
     created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
     updated_at: new Date(Date.now() - 3600000 * 3).toISOString()
   },
@@ -33,6 +35,7 @@ const DEFAULT_ITEMS = [
     unit: 'ขวด', 
     min_threshold: 1, 
     icon: '🧴',
+    barcode: '885000000002',
     created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
     updated_at: new Date(Date.now() - 3600000 * 2).toISOString()
   },
@@ -44,6 +47,7 @@ const DEFAULT_ITEMS = [
     unit: 'ขวด', 
     min_threshold: 1, 
     icon: '🧴',
+    barcode: '885000000003',
     created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
     updated_at: new Date(Date.now() - 3600000 * 4).toISOString()
   },
@@ -55,6 +59,7 @@ const DEFAULT_ITEMS = [
     unit: 'กระปุก', 
     min_threshold: 1, 
     icon: '✨',
+    barcode: '885000000004',
     created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
     updated_at: new Date(Date.now() - 3600000 * 1).toISOString()
   },
@@ -66,6 +71,7 @@ const DEFAULT_ITEMS = [
     unit: 'แพ็ค', 
     min_threshold: 2, 
     icon: '🧻',
+    barcode: '885000000005',
     created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
     updated_at: new Date(Date.now() - 1800000).toISOString()
   }
@@ -134,6 +140,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
   const [formName, setFormName] = useState('');
@@ -142,11 +149,11 @@ export default function App() {
   const [formUnit, setFormUnit] = useState('ชิ้น');
   const [formMinThreshold, setFormMinThreshold] = useState(1);
   const [formIcon, setFormIcon] = useState('📦');
+  const [formBarcode, setFormBarcode] = useState('');
 
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
 
-  // Trigger tactile vibration on mobile
   const triggerHaptic = () => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(35);
@@ -283,6 +290,26 @@ export default function App() {
     }
   };
 
+  const handleBarcodeScanned = (scannedCode) => {
+    setShowScannerModal(false);
+    triggerHaptic();
+
+    // Check if barcode exists in Stock
+    const foundItem = items.find(i => i.barcode === scannedCode || i.id === scannedCode);
+
+    if (foundItem) {
+      setActiveTab('stock');
+      setSearchQuery(foundItem.name);
+      alert(`📷 พบสินค้า: "${foundItem.name}" (คงเหลือ ${foundItem.quantity} ${foundItem.unit})`);
+    } else {
+      // Prefill barcode for new item creation
+      resetForm();
+      setFormBarcode(scannedCode);
+      setShowAddModal(true);
+      alert(`📷 สแกนพบรหัสบาร์โค้ดใหม่: ${scannedCode}\nกรุณากรอกชื่อสินค้าเพื่อบันทึกเข้าคลัง`);
+    }
+  };
+
   const handleSaveItemForm = (e) => {
     e.preventDefault();
     if (!formName.trim()) return;
@@ -298,6 +325,7 @@ export default function App() {
         unit: formUnit,
         min_threshold: Number(formMinThreshold),
         icon: formIcon,
+        barcode: formBarcode.trim(),
         updated_at: new Date().toISOString()
       } : i));
 
@@ -311,6 +339,7 @@ export default function App() {
         unit: formUnit,
         min_threshold: Number(formMinThreshold),
         icon: formIcon,
+        barcode: formBarcode.trim(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -330,6 +359,7 @@ export default function App() {
     setFormUnit(item.unit);
     setFormMinThreshold(item.min_threshold);
     setFormIcon(item.icon || '📦');
+    setFormBarcode(item.barcode || '');
     setShowAddModal(true);
   };
 
@@ -340,6 +370,7 @@ export default function App() {
     setFormUnit('ชิ้น');
     setFormMinThreshold(1);
     setFormIcon('📦');
+    setFormBarcode('');
     setEditingItem(null);
     setShowAddModal(false);
   };
@@ -406,7 +437,8 @@ export default function App() {
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            item.category.toLowerCase().includes(searchQuery.toLowerCase());
+                            item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (item.barcode && item.barcode.includes(searchQuery));
       const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
@@ -454,19 +486,29 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center bg-stone-100 border border-stone-200 rounded-full p-1 shadow-inner">
+          <div className="flex items-center gap-2">
             <button 
-              onClick={() => { triggerHaptic(); setActiveUserIndex(0); }}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 0 ? 'bg-emerald-600 text-white shadow' : 'text-stone-500'}`}
+              onClick={() => { triggerHaptic(); setShowScannerModal(true); }}
+              className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center text-sm shadow-xs"
+              title="สแกนบาร์โค้ดด้วยกล้องมือถือ"
             >
-              👨‍💻 U1
+              <i className="fa-solid fa-barcode"></i>
             </button>
-            <button 
-              onClick={() => { triggerHaptic(); setActiveUserIndex(1); }}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 1 ? 'bg-amber-600 text-white shadow' : 'text-stone-500'}`}
-            >
-              👩‍🎨 U2
-            </button>
+
+            <div className="flex items-center bg-stone-100 border border-stone-200 rounded-full p-1 shadow-inner">
+              <button 
+                onClick={() => { triggerHaptic(); setActiveUserIndex(0); }}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 0 ? 'bg-emerald-600 text-white shadow' : 'text-stone-500'}`}
+              >
+                👨‍💻 U1
+              </button>
+              <button 
+                onClick={() => { triggerHaptic(); setActiveUserIndex(1); }}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 1 ? 'bg-amber-600 text-white shadow' : 'text-stone-500'}`}
+              >
+                👩‍🎨 U2
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -595,15 +637,24 @@ export default function App() {
         {activeTab === 'stock' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <div className="relative">
-                <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"></i>
-                <input 
-                  type="text" 
-                  placeholder="ค้นหาชื่อสินค้า หรือหมวดหมู่..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-emerald-500 shadow-xs"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"></i>
+                  <input 
+                    type="text" 
+                    placeholder="ค้นหาชื่อสินค้า หมวดหมู่ หรือบาร์โค้ด..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-emerald-500 shadow-xs"
+                  />
+                </div>
+
+                <button 
+                  onClick={() => { triggerHaptic(); setShowScannerModal(true); }}
+                  className="bg-emerald-600 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xs shrink-0"
+                >
+                  <i className="fa-solid fa-barcode text-sm"></i> สแกน
+                </button>
               </div>
 
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -621,9 +672,15 @@ export default function App() {
 
             <div className="space-y-3">
               {filteredItems.length === 0 ? (
-                <div className="glass-card p-8 text-center text-stone-400">
-                  <i className="fa-solid fa-box-open text-3xl mb-2 text-stone-400"></i>
+                <div className="glass-card p-8 text-center text-stone-400 space-y-2">
+                  <i className="fa-solid fa-box-open text-3xl text-stone-400"></i>
                   <p className="text-sm">ไม่พบรายการสินค้าที่ค้นหา</p>
+                  <button 
+                    onClick={() => { resetForm(); setShowAddModal(true); }}
+                    className="text-xs text-emerald-700 font-bold hover:underline"
+                  >
+                    + เพิ่มสินค้าใหม่เข้าคลัง
+                  </button>
                 </div>
               ) : (
                 filteredItems.map(item => {
@@ -649,6 +706,11 @@ export default function App() {
                               <span className={`text-[10px] px-2 py-0.3 rounded-full font-bold ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
                                 {isOut ? '🔴 หมดแล้ว' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
                               </span>
+                              {item.barcode && (
+                                <span className="text-[9px] font-mono bg-stone-100 text-stone-500 px-1.5 py-0.2 rounded border border-stone-200">
+                                  <i className="fa-solid fa-barcode text-[8px] mr-1"></i>{item.barcode}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1004,6 +1066,14 @@ export default function App() {
         </div>
       </nav>
 
+      {/* BARCODE SCANNER MODAL */}
+      <BarcodeScannerModal 
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        onScanSuccess={handleBarcodeScanned}
+      />
+
+      {/* ADD / EDIT MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
           <div className="glass-card bg-white border border-stone-200 p-5 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto pb-safe">
@@ -1026,6 +1096,26 @@ export default function App() {
                   onChange={e => setFormName(e.target.value)}
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-emerald-500"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1 flex items-center justify-between">
+                  <span>รหัสบาร์โค้ด (Barcode / QR)</span>
+                  <button 
+                    type="button"
+                    onClick={() => { setShowAddModal(false); setShowScannerModal(true); }}
+                    className="text-emerald-700 text-[11px] font-bold hover:underline flex items-center gap-1"
+                  >
+                    <i className="fa-solid fa-barcode"></i> สแกนด้วยกล้อง
+                  </button>
+                </label>
+                <input 
+                  type="text"
+                  placeholder="เช่น 885000000001 (สแกนหรือพิมพ์ได้)"
+                  value={formBarcode}
+                  onChange={e => setFormBarcode(e.target.value)}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 font-mono focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
