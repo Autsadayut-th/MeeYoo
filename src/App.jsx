@@ -5,6 +5,9 @@ import { Register } from './pages/auth/Register';
 import { JoinHome } from './pages/JoinHome';
 import { CreateHome } from './pages/CreateHome';
 import { homeService } from './services/homeService';
+import { stockService } from './services/stockService';
+import { historyService } from './services/historyService';
+import { shoppingService } from './services/shoppingService';
 
 const DEFAULT_HOUSE = {
   id: 'h_home_8829',
@@ -45,7 +48,7 @@ export default function App() {
     return localStorage.getItem('meeyoo_theme') === 'dark';
   });
 
-  // Real Production State: Strictly start EMPTY [] for all new logins/homes
+  // Real Production State
   const [items, setItems] = useState(() => {
     const saved = localStorage.getItem('meeyoo_items_v3');
     return saved ? JSON.parse(saved) : [];
@@ -126,9 +129,19 @@ export default function App() {
     setTimeout(() => setConfettiParticles([]), 2600);
   };
 
-  // Sync Members from Cloud or Active Session
+  // Initial Fetch & Supabase Realtime Websocket Subscriptions for Multi-device Sync!
   useEffect(() => {
     if (house && house.id) {
+      // 1. Fetch initial Cloud data
+      stockService.fetchItems(house.id).then(cloudItems => {
+        if (cloudItems) setItems(cloudItems);
+      });
+      historyService.fetchHistory(house.id).then(cloudHistory => {
+        if (cloudHistory) setTransactions(cloudHistory);
+      });
+      shoppingService.fetchShoppingList(house.id).then(cloudShopping => {
+        if (cloudShopping) setShoppingList(cloudShopping);
+      });
       homeService.fetchMembers(house.id).then(fetched => {
         if (fetched && fetched.length > 0) {
           setMembers(fetched);
@@ -137,6 +150,17 @@ export default function App() {
           setMembers([userWithRole]);
         }
       });
+
+      // 2. Subscribe to Realtime Cloud channels
+      const subItems = stockService.subscribeToItems(house.id, (newItems) => setItems(newItems));
+      const subTx = historyService.subscribeToHistory(house.id, (newTx) => setTransactions(newTx));
+      const subShop = shoppingService.subscribeToShopping(house.id, (newShop) => setShoppingList(newShop));
+
+      return () => {
+        if (subItems) subItems.unsubscribe();
+        if (subTx) subTx.unsubscribe();
+        if (subShop) subShop.unsubscribe();
+      };
     }
   }, [house, currentUser]);
 
@@ -158,39 +182,6 @@ export default function App() {
       } catch (e) {}
     }
   }, [items, transactions, shoppingList, house, currentUser, members]);
-
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'meeyoo_items_v3' && e.newValue) setItems(JSON.parse(e.newValue));
-      if (e.key === 'meeyoo_transactions_v3' && e.newValue) setTransactions(JSON.parse(e.newValue));
-      if (e.key === 'meeyoo_shopping_v3' && e.newValue) setShoppingList(JSON.parse(e.newValue));
-      if (e.key === 'meeyoo_house_members_v3' && e.newValue) setMembers(JSON.parse(e.newValue));
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    let bc = null;
-    if (window.BroadcastChannel) {
-      try {
-        bc = new BroadcastChannel('meeyoo_realtime_sync_v3');
-        bc.onmessage = () => {
-          const i = localStorage.getItem('meeyoo_items_v3');
-          const t = localStorage.getItem('meeyoo_transactions_v3');
-          const s = localStorage.getItem('meeyoo_shopping_v3');
-          const m = localStorage.getItem('meeyoo_house_members_v3');
-          if (i) setItems(JSON.parse(i));
-          if (t) setTransactions(JSON.parse(t));
-          if (s) setShoppingList(JSON.parse(s));
-          if (m) setMembers(JSON.parse(m));
-        };
-      } catch (e) {}
-    }
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      if (bc) bc.close();
-    };
-  }, []);
 
   useEffect(() => {
     const lowOrOutItems = items.filter(item => item.quantity <= item.min_threshold);
@@ -225,18 +216,17 @@ export default function App() {
       created_at: new Date().toISOString()
     };
     setTransactions(prev => [newTx, ...prev]);
+    historyService.addTransaction(newTx, house.id);
   };
 
   const handleQuickUseOne = (item) => {
     if (item.quantity <= 0) return;
     triggerHaptic();
     const newQty = item.quantity - 1;
+    const updated = { ...item, quantity: newQty, updated_at: new Date().toISOString() };
     
-    setItems(prev => prev.map(i => i.id === item.id ? { 
-      ...i, 
-      quantity: newQty, 
-      updated_at: new Date().toISOString() 
-    } : i));
+    setItems(prev => prev.map(i => i.id === item.id ? updated : i));
+    stockService.saveItem(updated, house.id);
 
     recordTransaction(item.name, 'USE', item.quantity, newQty, -1, 'กดปุ่ม "ใช้ 1"');
   };
@@ -245,12 +235,10 @@ export default function App() {
     if (delta < 0 && item.quantity <= 0) return;
     triggerHaptic();
     const newQty = Math.max(0, item.quantity + delta);
+    const updated = { ...item, quantity: newQty, updated_at: new Date().toISOString() };
 
-    setItems(prev => prev.map(i => i.id === item.id ? { 
-      ...i, 
-      quantity: newQty, 
-      updated_at: new Date().toISOString() 
-    } : i));
+    setItems(prev => prev.map(i => i.id === item.id ? updated : i));
+    stockService.saveItem(updated, house.id);
 
     recordTransaction(
       item.name, 
@@ -266,6 +254,7 @@ export default function App() {
     triggerHaptic();
     if (confirm(`คุณต้องการลบรายการ "${item.name}" ออกจากคลังสินค้าหรือไม่?`)) {
       setItems(prev => prev.filter(i => i.id !== item.id));
+      stockService.deleteItem(item.id);
       recordTransaction(item.name, 'DELETE', item.quantity, 0, -item.quantity, 'ลบสินค้าออกจากระบบ');
     }
   };
@@ -317,8 +306,8 @@ export default function App() {
 
     if (editingItem) {
       const newQty = Number(formQuantity);
-      setItems(prev => prev.map(i => i.id === editingItem.id ? {
-        ...i,
+      const updated = {
+        ...editingItem,
         name: formName.trim(),
         category: formCategory,
         quantity: newQty,
@@ -327,7 +316,9 @@ export default function App() {
         icon: formIcon,
         barcode: formBarcode.trim(),
         updated_at: new Date().toISOString()
-      } : i));
+      };
+      setItems(prev => prev.map(i => i.id === editingItem.id ? updated : i));
+      stockService.saveItem(updated, house.id);
 
       recordTransaction(formName.trim(), 'UPDATE', editingItem.quantity, newQty, newQty - editingItem.quantity, 'แก้ไขรายละเอียดสินค้า');
     } else {
@@ -345,6 +336,7 @@ export default function App() {
       };
 
       setItems(prev => [newItem, ...prev]);
+      stockService.saveItem(newItem, house.id);
       recordTransaction(newItem.name, 'ADD', 0, newItem.quantity, newItem.quantity, 'เพิ่มสินค้าใหม่เข้าคลัง');
     }
 
@@ -389,13 +381,21 @@ export default function App() {
     };
 
     setShoppingList(prev => [newShopItem, ...prev]);
+    shoppingService.saveShoppingItem(newShopItem, house.id);
     setShopItemName('');
     setShopItemQty(1);
   };
 
   const toggleShoppingPurchased = (id) => {
     triggerHaptic();
-    setShoppingList(prev => prev.map(s => s.id === id ? { ...s, is_purchased: !s.is_purchased } : s));
+    setShoppingList(prev => prev.map(s => {
+      if (s.id === id) {
+        const updated = { ...s, is_purchased: !s.is_purchased };
+        shoppingService.saveShoppingItem(updated, house.id);
+        return updated;
+      }
+      return s;
+    }));
   };
 
   const handleRestockPurchased = (shopItem) => {
@@ -407,12 +407,14 @@ export default function App() {
     if (existing) {
       const qtyBefore = existing.quantity;
       const qtyAfter = existing.quantity + shopItem.quantity_needed;
-
-      setItems(prev => prev.map(i => i.id === existing.id ? { 
-        ...i, 
+      const updated = { 
+        ...existing, 
         quantity: qtyAfter,
         updated_at: new Date().toISOString() 
-      } : i));
+      };
+
+      setItems(prev => prev.map(i => i.id === existing.id ? updated : i));
+      stockService.saveItem(updated, house.id);
 
       recordTransaction(existing.name, 'RESTOCK', qtyBefore, qtyAfter, shopItem.quantity_needed, 'เติมเข้าคลังจากการซื้อของใหม่');
     } else {
@@ -429,10 +431,12 @@ export default function App() {
       };
 
       setItems(prev => [newItem, ...prev]);
+      stockService.saveItem(newItem, house.id);
       recordTransaction(newItem.name, 'RESTOCK', 0, shopItem.quantity_needed, shopItem.quantity_needed, 'เพิ่มเข้าคลังจากการซื้อของใหม่');
     }
 
     setShoppingList(prev => prev.filter(s => s.id !== shopItem.id));
+    shoppingService.deleteShoppingItem(shopItem.id);
   };
 
   const handleSignOut = () => {
