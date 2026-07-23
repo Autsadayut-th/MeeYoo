@@ -109,16 +109,16 @@ const INITIAL_SHOPPING_LIST = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Real Account Session
+  // Real Account Session check
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('meeyoo_current_user');
-    return saved ? JSON.parse(saved) : {
-      id: 'u1',
-      name: 'คุณสมชาย',
-      email: 'user1@meeyoo.app',
-      role: 'เจ้าของบ้าน',
-      avatar: '👨‍💻'
-    };
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // Auth Screen Flow: Default to 'login' if user is not logged in yet!
+  const [authView, setAuthView] = useState(() => {
+    const savedUser = localStorage.getItem('meeyoo_current_user');
+    return savedUser ? 'app' : 'login';
   });
 
   // Dynamic Members List in Active House
@@ -129,9 +129,6 @@ export default function App() {
       { id: 'u2', name: 'คุณสมหญิง', email: 'user2@meeyoo.app', role: 'สมาชิก', avatar: '👩‍🎨' }
     ];
   });
-
-  // Auth Screen Flow: 'app' | 'login' | 'register' | 'join_home' | 'create_home'
-  const [authView, setAuthView] = useState('app');
 
   // Theme Mode State
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -243,7 +240,9 @@ export default function App() {
     localStorage.setItem('meeyoo_transactions_v2', JSON.stringify(transactions));
     localStorage.setItem('meeyoo_shopping_v2', JSON.stringify(shoppingList));
     localStorage.setItem('meeyoo_active_house_v2', JSON.stringify(house));
-    localStorage.setItem('meeyoo_current_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem('meeyoo_current_user', JSON.stringify(currentUser));
+    }
     localStorage.setItem('meeyoo_house_members_v2', JSON.stringify(members));
 
     if (window.BroadcastChannel) {
@@ -312,7 +311,7 @@ export default function App() {
     const newTx = {
       id: 't_' + Date.now() + Math.random().toString(36).substr(2, 4),
       item_name: itemName,
-      user_name: currentUser.name,
+      user_name: currentUser ? currentUser.name : 'สมาชิกในบ้าน',
       action_type: actionType,
       qty_before: qtyBefore,
       qty_after: qtyAfter,
@@ -534,6 +533,7 @@ export default function App() {
   const handleSignOut = () => {
     if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
       localStorage.removeItem('meeyoo_current_user');
+      setCurrentUser(null);
       setAuthView('login');
     }
   };
@@ -562,8 +562,8 @@ export default function App() {
     return { total, lowCount, outCount, shoppingCount };
   }, [items, shoppingList]);
 
-  // AUTH FLOW ROUTING
-  if (authView === 'login') {
+  // AUTH FLOW ROUTING: If user is not logged in, ALWAYS direct to Login first!
+  if (authView === 'login' || !currentUser) {
     return <Login onLoginSuccess={(u) => { setCurrentUser(u); setAuthView('app'); }} onSwitchToRegister={() => setAuthView('register')} />;
   }
 
@@ -652,9 +652,9 @@ export default function App() {
               className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-full px-2.5 py-1 text-xs cursor-pointer hover:border-emerald-500 shadow-inner transition"
               title="ดูโปรไฟล์สมาชิกร่วมบ้าน"
             >
-              <span className="text-sm">{currentUser.avatar}</span>
+              <span className="text-sm">{currentUser?.avatar || '👤'}</span>
               <span className="font-bold text-stone-800 dark:text-slate-200 hidden sm:inline text-[11px] truncate max-w-[80px]">
-                {currentUser.name.split(' ')[0]}
+                {currentUser?.name ? currentUser.name.split(' ')[0] : 'สมาชิก'}
               </span>
             </div>
           </div>
@@ -666,10 +666,10 @@ export default function App() {
           <div className="space-y-5">
             <div className="glass-card p-4 flex items-center justify-between bg-gradient-to-r from-emerald-50 via-teal-50 to-stone-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 border-emerald-200 dark:border-slate-700">
               <div className="flex items-center gap-3">
-                <div className="text-3xl">{currentUser.avatar}</div>
+                <div className="text-3xl">{currentUser?.avatar || '👤'}</div>
                 <div>
                   <div className="text-xs text-stone-500 dark:text-slate-400">เข้าสู่ระบบในชื่อ:</div>
-                  <div className="font-bold text-stone-900 dark:text-white text-base">{currentUser.name}</div>
+                  <div className="font-bold text-stone-900 dark:text-white text-base">{currentUser?.name || 'สมาชิก'}</div>
                 </div>
               </div>
 
@@ -1137,7 +1137,7 @@ export default function App() {
                     <div className="flex-1">
                       <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
                         {mem.name}
-                        {mem.email === currentUser.email && (
+                        {mem.email === currentUser?.email && (
                           <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
                             บัญชีของคุณ
                           </span>
