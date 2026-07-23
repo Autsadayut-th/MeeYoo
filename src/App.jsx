@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarcodeScannerModal } from './components/stock/BarcodeScannerModal';
 
 const DEFAULT_HOUSE = {
@@ -116,6 +116,11 @@ export default function App() {
   const [activeUserIndex, setActiveUserIndex] = useState(0);
   const currentUser = DEFAULT_MEMBERS[activeUserIndex];
 
+  // Theme Mode State
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('meeyoo_theme') === 'dark';
+  });
+
   const [house, setHouse] = useState(() => {
     const saved = localStorage.getItem('meeyoo_active_house_v2');
     return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
@@ -154,10 +159,49 @@ export default function App() {
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
 
-  const triggerHaptic = () => {
+  // Confetti Animation Particles State
+  const [confettiParticles, setConfettiParticles] = useState([]);
+
+  // Touch Swipe Gesture Refs
+  const touchStartX = useRef(0);
+  const touchCurrentItem = useRef(null);
+
+  const triggerHaptic = (pattern = 35) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(35);
+      navigator.vibrate(pattern);
     }
+  };
+
+  const toggleDarkMode = () => {
+    triggerHaptic();
+    setIsDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('meeyoo_theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  // Trigger Confetti Party Burst
+  const triggerConfetti = () => {
+    const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6'];
+    const particles = Array.from({ length: 40 }).map((_, i) => ({
+      id: i + '_' + Date.now(),
+      left: Math.random() * 100 + 'vw',
+      color: colors[Math.floor(Math.random() * colors.length)],
+      delay: Math.random() * 0.4 + 's',
+      size: Math.random() * 8 + 6 + 'px'
+    }));
+
+    setConfettiParticles(particles);
+    setTimeout(() => setConfettiParticles([]), 2600);
   };
 
   useEffect(() => {
@@ -290,11 +334,34 @@ export default function App() {
     }
   };
 
+  // Touch Swipe Gesture Handlers
+  const handleTouchStart = (e, item) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchCurrentItem.current = item;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!touchCurrentItem.current) return;
+    const diffX = e.changedTouches[0].clientX - touchStartX.current;
+    
+    // Swipe Right Trigger "ใช้ 1"
+    if (diffX > 75) {
+      if (touchCurrentItem.current.quantity > 0) {
+        handleQuickUseOne(touchCurrentItem.current);
+      }
+    }
+    // Swipe Left Trigger Edit Modal
+    else if (diffX < -75) {
+      openEditModal(touchCurrentItem.current);
+    }
+
+    touchCurrentItem.current = null;
+  };
+
   const handleBarcodeScanned = (scannedCode) => {
     setShowScannerModal(false);
-    triggerHaptic();
+    triggerHaptic([80, 40, 80]);
 
-    // Check if barcode exists in Stock
     const foundItem = items.find(i => i.barcode === scannedCode || i.id === scannedCode);
 
     if (foundItem) {
@@ -302,7 +369,6 @@ export default function App() {
       setSearchQuery(foundItem.name);
       alert(`📷 พบสินค้า: "${foundItem.name}" (คงเหลือ ${foundItem.quantity} ${foundItem.unit})`);
     } else {
-      // Prefill barcode for new item creation
       resetForm();
       setFormBarcode(scannedCode);
       setShowAddModal(true);
@@ -399,7 +465,9 @@ export default function App() {
   };
 
   const handleRestockPurchased = (shopItem) => {
-    triggerHaptic();
+    triggerHaptic([50, 50, 100]);
+    triggerConfetti();
+
     const existing = items.find(i => i.id === shopItem.item_id || i.name.toLowerCase() === shopItem.item_name.toLowerCase());
 
     if (existing) {
@@ -431,7 +499,6 @@ export default function App() {
     }
 
     setShoppingList(prev => prev.filter(s => s.id !== shopItem.id));
-    alert(`เติม "${shopItem.item_name}" จำนวน ${shopItem.quantity_needed} กลับเข้าคลังสินค้าเรียบร้อย!`);
   };
 
   const filteredItems = useMemo(() => {
@@ -460,13 +527,33 @@ export default function App() {
 
   return (
     <div className="min-h-screen relative pb-28 md:pb-8 pt-safe">
+      {/* CONFETTI ANIMATION OVERLAY */}
+      {confettiParticles.length > 0 && (
+        <div className="confetti-container">
+          {confettiParticles.map(p => (
+            <div 
+              key={p.id}
+              className="confetti-particle"
+              style={{
+                left: p.left,
+                backgroundColor: p.color,
+                width: p.size,
+                height: p.size,
+                animationDelay: p.delay
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       <div className="bg-blobs">
         <div className="blob blob-1"></div>
         <div className="blob blob-2"></div>
         <div className="blob blob-3"></div>
       </div>
 
-      <header className="sticky top-0 z-30 bg-[#faf8f5]/90 backdrop-blur-xl border-b border-[#e8e4df] px-4 py-3 shadow-xs">
+      {/* HEADER NAVBAR WITH THEME TOGGLE */}
+      <header className="sticky top-0 z-30 bg-var(--bg-card) backdrop-blur-xl border-b border-var(--border-color) px-4 py-3 shadow-xs">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white text-lg shadow-md shadow-emerald-600/20 shrink-0">
@@ -474,12 +561,12 @@ export default function App() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-heading font-extrabold text-stone-900 text-base leading-tight">MeeYoo</span>
+                <span className="font-heading font-extrabold text-var(--text-main) text-base leading-tight">MeeYoo</span>
                 <div className="pulse-emerald" title="Real-time Sync Active"></div>
               </div>
-              <div className="text-xs text-stone-500 font-medium flex items-center gap-1">
+              <div className="text-xs text-var(--text-muted) font-medium flex items-center gap-1">
                 <span>{house.name}</span>
-                <span className="text-[10px] bg-stone-100 border border-stone-200 px-1.5 py-0.2 rounded font-mono text-stone-600">
+                <span className="text-[10px] bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 px-1.5 py-0.2 rounded font-mono">
                   {house.code}
                 </span>
               </div>
@@ -487,24 +574,35 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* DARK / LIGHT MODE TOGGLE */}
+            <button
+              onClick={toggleDarkMode}
+              className="w-9 h-9 rounded-full bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-amber-300 flex items-center justify-center text-sm shadow-xs transition"
+              title={isDarkMode ? 'สลับเป็น Warm Light Mode' : 'สลับเป็น Warm Dark Mode'}
+            >
+              <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            </button>
+
+            {/* BARCODE SCANNER BUTTON */}
             <button 
               onClick={() => { triggerHaptic(); setShowScannerModal(true); }}
-              className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center text-sm shadow-xs"
+              className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm shadow-xs"
               title="สแกนบาร์โค้ดด้วยกล้องมือถือ"
             >
               <i className="fa-solid fa-barcode"></i>
             </button>
 
-            <div className="flex items-center bg-stone-100 border border-stone-200 rounded-full p-1 shadow-inner">
+            {/* USER SWITCHER */}
+            <div className="flex items-center bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-full p-1 shadow-inner">
               <button 
                 onClick={() => { triggerHaptic(); setActiveUserIndex(0); }}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 0 ? 'bg-emerald-600 text-white shadow' : 'text-stone-500'}`}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 0 ? 'bg-emerald-600 text-white shadow' : 'text-stone-500 dark:text-slate-400'}`}
               >
                 👨‍💻 U1
               </button>
               <button 
                 onClick={() => { triggerHaptic(); setActiveUserIndex(1); }}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 1 ? 'bg-amber-600 text-white shadow' : 'text-stone-500'}`}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 1 ? 'bg-amber-600 text-white shadow' : 'text-stone-500 dark:text-slate-400'}`}
               >
                 👩‍🎨 U2
               </button>
@@ -516,12 +614,12 @@ export default function App() {
       <main className="max-w-4xl mx-auto px-4 pt-4">
         {activeTab === 'dashboard' && (
           <div className="space-y-5">
-            <div className="glass-card p-4 flex items-center justify-between bg-gradient-to-r from-emerald-50 via-teal-50 to-stone-50 border-emerald-200">
+            <div className="glass-card p-4 flex items-center justify-between bg-gradient-to-r from-emerald-50 via-teal-50 to-stone-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 border-emerald-200 dark:border-slate-700">
               <div className="flex items-center gap-3">
                 <div className="text-3xl">{currentUser.avatar}</div>
                 <div>
-                  <div className="text-xs text-stone-500">กำลังใช้งานโดย:</div>
-                  <div className="font-bold text-stone-900 text-base">{currentUser.name}</div>
+                  <div className="text-xs text-stone-500 dark:text-slate-400">กำลังใช้งานโดย:</div>
+                  <div className="font-bold text-stone-900 dark:text-white text-base">{currentUser.name}</div>
                 </div>
               </div>
 
@@ -540,50 +638,50 @@ export default function App() {
             <div className="grid grid-cols-2 gap-3">
               <div className="glass-card p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-stone-500 font-medium">📦 สินค้าทั้งหมด</span>
+                  <span className="text-xs text-stone-500 dark:text-slate-400 font-medium">📦 สินค้าทั้งหมด</span>
                   <i className="fa-solid fa-boxes-stacked text-emerald-600 text-sm"></i>
                 </div>
-                <div className="font-heading text-2xl font-extrabold text-stone-900 mt-1">{stats.total}</div>
-                <div className="text-[10px] text-stone-500 mt-0.5">รายการในบ้าน</div>
+                <div className="font-heading text-2xl font-extrabold text-stone-900 dark:text-white mt-1">{stats.total}</div>
+                <div className="text-[10px] text-stone-500 dark:text-slate-400 mt-0.5">รายการในบ้าน</div>
               </div>
 
-              <div className="glass-card p-4 border-amber-200 bg-amber-50/30">
+              <div className="glass-card p-4 border-amber-200 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-950/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-amber-700 font-medium">⚠️ ใกล้หมด</span>
+                  <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">⚠️ ใกล้หมด</span>
                   <i className="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
                 </div>
-                <div className="font-heading text-2xl font-extrabold text-amber-800 mt-1">{stats.lowCount}</div>
-                <div className="text-[10px] text-amber-700/80 mt-0.5">น้อยกว่าขั้นต่ำ</div>
+                <div className="font-heading text-2xl font-extrabold text-amber-800 dark:text-amber-300 mt-1">{stats.lowCount}</div>
+                <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">น้อยกว่าขั้นต่ำ</div>
               </div>
 
-              <div className="glass-card p-4 border-rose-200 bg-rose-50/30">
+              <div className="glass-card p-4 border-rose-200 dark:border-rose-900/50 bg-rose-50/30 dark:bg-rose-950/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-rose-700 font-medium">🔴 หมดแล้ว</span>
+                  <span className="text-xs text-rose-700 dark:text-rose-400 font-medium">🔴 หมดแล้ว</span>
                   <i className="fa-solid fa-circle-xmark text-rose-600 text-sm"></i>
                 </div>
-                <div className="font-heading text-2xl font-extrabold text-rose-800 mt-1">{stats.outCount}</div>
-                <div className="text-[10px] text-rose-700/80 mt-0.5">จำนวนคงเหลือ 0</div>
+                <div className="font-heading text-2xl font-extrabold text-rose-800 dark:text-rose-300 mt-1">{stats.outCount}</div>
+                <div className="text-[10px] text-rose-700/80 dark:text-rose-400/80 mt-0.5">จำนวนคงเหลือ 0</div>
               </div>
 
-              <div className="glass-card p-4 border-teal-200 bg-teal-50/30">
+              <div className="glass-card p-4 border-teal-200 dark:border-teal-900/50 bg-teal-50/30 dark:bg-teal-950/20">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-teal-700 font-medium">🛒 รายการซื้อ</span>
+                  <span className="text-xs text-teal-700 dark:text-teal-400 font-medium">🛒 รายการซื้อ</span>
                   <i className="fa-solid fa-cart-shopping text-teal-600 text-sm"></i>
                 </div>
-                <div className="font-heading text-2xl font-extrabold text-teal-800 mt-1">{stats.shoppingCount}</div>
-                <div className="text-[10px] text-teal-700/80 mt-0.5">ต้องซื้อเข้าบ้าน</div>
+                <div className="font-heading text-2xl font-extrabold text-teal-800 dark:text-teal-300 mt-1">{stats.shoppingCount}</div>
+                <div className="text-[10px] text-teal-700/80 dark:text-teal-400/80 mt-0.5">ต้องซื้อเข้าบ้าน</div>
               </div>
             </div>
 
             <div className="glass-card p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-heading font-bold text-base text-stone-900 flex items-center gap-2">
+                <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white flex items-center gap-2">
                   <i className="fa-solid fa-layer-group text-emerald-600"></i>
                   <span>รายการสินค้าในบ้าน</span>
                 </h3>
                 <button 
                   onClick={() => { triggerHaptic(); setActiveTab('stock'); }}
-                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
                 >
                   ดูทั้งหมด ({items.length}) <i className="fa-solid fa-chevron-right text-[10px] ml-0.5"></i>
                 </button>
@@ -593,38 +691,48 @@ export default function App() {
                 {items.slice(0, 5).map(item => {
                   const isOut = item.quantity === 0;
                   const isLow = item.quantity <= item.min_threshold && !isOut;
+                  const gaugePct = Math.min(100, Math.round((item.quantity / (item.min_threshold * 2)) * 100));
 
                   return (
-                    <div key={item.id} className="bg-stone-50 border border-stone-200 rounded-xl p-3 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 rounded-xl bg-white border border-stone-200 flex items-center justify-center text-xl shrink-0 shadow-xs">
-                          {item.icon || '📦'}
-                        </div>
-                        <div className="overflow-hidden">
-                          <div className="font-bold text-sm text-stone-900 truncate">{item.name}</div>
-                          <div className="text-[11px] text-stone-500 flex items-center gap-2">
-                            <span>{item.category}</span>
-                            <span className={`px-1.5 py-0.2 rounded-full font-bold text-[10px] ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
-                              {isOut ? '🔴 หมด' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
-                            </span>
+                    <div key={item.id} className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0 shadow-xs">
+                            {item.icon || '📦'}
                           </div>
+                          <div className="overflow-hidden">
+                            <div className="font-bold text-sm text-stone-900 dark:text-white truncate">{item.name}</div>
+                            <div className="text-[11px] text-stone-500 dark:text-slate-400 flex items-center gap-2">
+                              <span>{item.category}</span>
+                              <span className={`px-1.5 py-0.2 rounded-full font-bold text-[10px] ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
+                                {isOut ? '🔴 หมด' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <span className="font-heading font-extrabold text-lg text-stone-900 dark:text-white">{item.quantity}</span>
+                            <span className="text-xs text-stone-500 dark:text-slate-400 ml-1">{item.unit}</span>
+                          </div>
+
+                          <button 
+                            onClick={() => handleQuickUseOne(item)}
+                            disabled={isOut}
+                            className="btn-use-one text-xs px-3 py-1.5"
+                          >
+                            <i className="fa-solid fa-hand-holding"></i> ใช้ 1
+                          </button>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right">
-                          <span className="font-heading font-extrabold text-lg text-stone-900">{item.quantity}</span>
-                          <span className="text-xs text-stone-500 ml-1">{item.unit}</span>
-                        </div>
-
-                        <button 
-                          onClick={() => handleQuickUseOne(item)}
-                          disabled={isOut}
-                          className="btn-use-one text-xs px-3 py-1.5"
-                          title="กดใช้ 1"
-                        >
-                          <i className="fa-solid fa-hand-holding"></i> ใช้ 1
-                        </button>
+                      {/* VISUAL PROGRESS GAUGE BAR */}
+                      <div className="w-full bg-stone-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-500 ${isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                          style={{ width: `${gaugePct}%` }}
+                        />
                       </div>
                     </div>
                   );
@@ -645,7 +753,7 @@ export default function App() {
                     placeholder="ค้นหาชื่อสินค้า หมวดหมู่ หรือบาร์โค้ด..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-emerald-500 shadow-xs"
+                    className="w-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
                   />
                 </div>
 
@@ -662,7 +770,7 @@ export default function App() {
                   <button
                     key={cat}
                     onClick={() => { triggerHaptic(); setSelectedCategory(cat); }}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition ${selectedCategory === cat ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' : 'bg-white border-stone-200 text-stone-600'}`}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition ${selectedCategory === cat ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300'}`}
                   >
                     {cat === 'ALL' ? 'ทุกหมวดหมู่' : cat}
                   </button>
@@ -677,7 +785,7 @@ export default function App() {
                   <p className="text-sm">ไม่พบรายการสินค้าที่ค้นหา</p>
                   <button 
                     onClick={() => { resetForm(); setShowAddModal(true); }}
-                    className="text-xs text-emerald-700 font-bold hover:underline"
+                    className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
                   >
                     + เพิ่มสินค้าใหม่เข้าคลัง
                   </button>
@@ -687,27 +795,33 @@ export default function App() {
                   const isOut = item.quantity === 0;
                   const isLow = item.quantity <= item.min_threshold && !isOut;
                   const statusBarClass = isOut ? 'status-bar-out' : isLow ? 'status-bar-low' : 'status-bar-ok';
+                  const gaugePct = Math.min(100, Math.round((item.quantity / (item.min_threshold * 2)) * 100));
 
                   return (
-                    <div key={item.id} className="glass-card relative overflow-hidden p-4 space-y-3">
+                    <div 
+                      key={item.id} 
+                      onTouchStart={e => handleTouchStart(e, item)}
+                      onTouchEnd={handleTouchEnd}
+                      className="glass-card relative overflow-hidden p-4 space-y-3 touch-pan-y"
+                    >
                       <div className={`absolute top-0 left-0 right-0 h-1 ${statusBarClass}`}></div>
 
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-2xl shrink-0">
+                          <div className="w-11 h-11 rounded-xl bg-stone-100 dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-2xl shrink-0">
                             {item.icon || '📦'}
                           </div>
                           <div>
-                            <h3 className="font-heading font-bold text-base text-stone-900">{item.name}</h3>
+                            <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white">{item.name}</h3>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] bg-stone-100 border border-stone-200 px-2 py-0.3 rounded-full text-stone-600">
+                              <span className="text-[10px] bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 px-2 py-0.3 rounded-full text-stone-600 dark:text-slate-400">
                                 {item.category}
                               </span>
                               <span className={`text-[10px] px-2 py-0.3 rounded-full font-bold ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
                                 {isOut ? '🔴 หมดแล้ว' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
                               </span>
                               {item.barcode && (
-                                <span className="text-[9px] font-mono bg-stone-100 text-stone-500 px-1.5 py-0.2 rounded border border-stone-200">
+                                <span className="text-[9px] font-mono bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-slate-400 px-1.5 py-0.2 rounded border border-stone-200 dark:border-slate-700">
                                   <i className="fa-solid fa-barcode text-[8px] mr-1"></i>{item.barcode}
                                 </span>
                               )}
@@ -718,14 +832,14 @@ export default function App() {
                         <div className="flex items-center gap-1">
                           <button 
                             onClick={() => openEditModal(item)}
-                            className="text-stone-400 hover:text-emerald-600 p-2 rounded-lg hover:bg-stone-100 text-sm"
-                            title="แก้ไข"
+                            className="text-stone-400 hover:text-emerald-600 p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-800 text-sm"
+                            title="แก้ไข (หรือปัดซ้าย)"
                           >
                             <i className="fa-solid fa-pen-to-square"></i>
                           </button>
                           <button 
                             onClick={() => handleDeleteItem(item)}
-                            className="text-stone-400 hover:text-rose-600 p-2 rounded-lg hover:bg-stone-100 text-sm"
+                            className="text-stone-400 hover:text-rose-600 p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-800 text-sm"
                             title="ลบ"
                           >
                             <i className="fa-solid fa-trash-can"></i>
@@ -733,13 +847,27 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-stone-100 pt-3">
+                      {/* VISUAL PROGRESS GAUGE BAR */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-stone-400 dark:text-slate-500">
+                          <span>ระดับคลังคงเหลือ</span>
+                          <span>{gaugePct}%</span>
+                        </div>
+                        <div className="w-full bg-stone-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${gaugePct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-stone-100 dark:border-slate-700/60 pt-3">
                         <div className="flex items-baseline gap-1.5">
-                          <span className={`font-heading text-3xl font-extrabold ${isOut ? 'text-rose-600' : isLow ? 'text-amber-700' : 'text-stone-900'}`}>
+                          <span className={`font-heading text-3xl font-extrabold ${isOut ? 'text-rose-600 dark:text-rose-400' : isLow ? 'text-amber-700 dark:text-amber-400' : 'text-stone-900 dark:text-white'}`}>
                             {item.quantity}
                           </span>
-                          <span className="text-xs text-stone-500">{item.unit}</span>
-                          <span className="text-[10px] text-stone-400 ml-1">(ขั้นต่ำ {item.min_threshold})</span>
+                          <span className="text-xs text-stone-500 dark:text-slate-400">{item.unit}</span>
+                          <span className="text-[10px] text-stone-400 dark:text-slate-500 ml-1">(ขั้นต่ำ {item.min_threshold})</span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -747,6 +875,7 @@ export default function App() {
                             onClick={() => handleQuickUseOne(item)}
                             disabled={isOut}
                             className="btn-use-one px-3.5 py-2 text-xs"
+                            title="กดใช้ 1 (หรือปัดการ์ดไปทางขวา 👉)"
                           >
                             <i className="fa-solid fa-hand-holding"></i> ใช้ 1
                           </button>
@@ -779,7 +908,7 @@ export default function App() {
         {activeTab === 'shopping' && (
           <div className="space-y-4">
             <div className="glass-card p-4">
-              <h3 className="font-heading font-bold text-sm text-stone-900 mb-3 flex items-center gap-2">
+              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3 flex items-center gap-2">
                 <i className="fa-solid fa-cart-plus text-emerald-600"></i>
                 <span>เพิ่มรายการซื้อของด้วยตัวเอง</span>
               </h3>
@@ -790,7 +919,7 @@ export default function App() {
                   placeholder="ชื่อสินค้าที่จะซื้อ..."
                   value={shopItemName}
                   onChange={e => setShopItemName(e.target.value)}
-                  className="flex-1 bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:border-emerald-500"
+                  className="flex-1 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
                 <input 
                   type="number" 
@@ -798,7 +927,7 @@ export default function App() {
                   placeholder="จำนวน"
                   value={shopItemQty}
                   onChange={e => setShopItemQty(e.target.value)}
-                  className="w-16 bg-white border border-stone-200 rounded-xl px-2 py-2 text-xs text-stone-900 text-center focus:outline-none focus:border-emerald-500"
+                  className="w-16 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-2 py-2 text-xs text-stone-900 dark:text-white text-center focus:outline-none focus:border-emerald-500"
                 />
                 <button 
                   type="submit"
@@ -810,22 +939,22 @@ export default function App() {
             </div>
 
             <div className="glass-card p-4">
-              <h3 className="font-heading font-bold text-base text-stone-900 mb-3 flex items-center justify-between">
+              <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white mb-3 flex items-center justify-between">
                 <span>🛒 รายการของที่ต้องซื้อเข้าบ้าน</span>
-                <span className="text-[11px] text-stone-500">ดึงของใกล้หมดให้อัตโนมัติ</span>
+                <span className="text-[11px] text-stone-500 dark:text-slate-400">ดึงของใกล้หมดให้อัตโนมัติ</span>
               </h3>
 
               <div className="space-y-2.5">
                 {shoppingList.length === 0 ? (
-                  <div className="py-8 text-center text-stone-400 text-xs">
-                    <i className="fa-solid fa-basket-shopping text-2xl mb-2 text-stone-300"></i>
+                  <div className="py-8 text-center text-stone-400 dark:text-slate-500 text-xs">
+                    <i className="fa-solid fa-basket-shopping text-2xl mb-2 text-stone-300 dark:text-slate-600"></i>
                     <p>ไม่มีรายการที่ต้องซื้อ สินค้าในบ้านยังมีเพียงพอ!</p>
                   </div>
                 ) : (
                   shoppingList.map(item => (
                     <div 
                       key={item.id}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition ${item.is_purchased ? 'bg-stone-50 border-stone-200 opacity-60' : 'bg-white border-stone-200 shadow-xs'}`}
+                      className={`flex items-center justify-between p-3 rounded-xl border transition ${item.is_purchased ? 'bg-stone-50 dark:bg-slate-900/60 border-stone-200 dark:border-slate-800 opacity-60' : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 shadow-xs'}`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
                         <button 
@@ -835,23 +964,23 @@ export default function App() {
                           <i className="fa-solid fa-check text-xs"></i>
                         </button>
                         <div className="overflow-hidden">
-                          <div className={`font-bold text-sm truncate ${item.is_purchased ? 'line-through text-stone-400' : 'text-stone-900'}`}>
+                          <div className={`font-bold text-sm truncate ${item.is_purchased ? 'line-through text-stone-400 dark:text-slate-500' : 'text-stone-900 dark:text-white'}`}>
                             {item.item_name}
                           </div>
-                          <div className="text-[10px] text-stone-500">
+                          <div className="text-[10px] text-stone-500 dark:text-slate-400">
                             {item.auto_added ? '⚡ แจ้งเตือนของใกล้หมด' : '📝 เพิ่มเอง'}
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="font-bold text-xs text-stone-700">ต้องซื้อ: {item.quantity_needed}</span>
+                        <span className="font-bold text-xs text-stone-700 dark:text-slate-300">ต้องซื้อ: {item.quantity_needed}</span>
                         {item.is_purchased && (
                           <button 
                             onClick={() => handleRestockPurchased(item)}
-                            className="bg-emerald-600 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs animate-bounce"
                           >
-                            <i className="fa-solid fa-box-archive"></i> เติมเข้า Stock
+                            <i className="fa-solid fa-box-archive"></i> เติมเข้า Stock 🎉
                           </button>
                         )}
                       </div>
@@ -865,14 +994,14 @@ export default function App() {
 
         {activeTab === 'history' && (
           <div className="glass-card p-4">
-            <h3 className="font-heading font-bold text-base text-stone-900 mb-4 flex items-center gap-2">
+            <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white mb-4 flex items-center gap-2">
               <i className="fa-solid fa-clock-rotate-left text-emerald-600"></i>
               <span>ประวัติการเปลี่ยนแปลง Stock ทั้งหมด</span>
             </h3>
 
-            <div className="relative pl-5 border-l-2 border-stone-200 space-y-4">
+            <div className="relative pl-5 border-l-2 border-stone-200 dark:border-slate-700 space-y-4">
               {transactions.length === 0 ? (
-                <p className="text-xs text-stone-400 py-3">ยังไม่มีบันทึกประวัติกิจกรรม</p>
+                <p className="text-xs text-stone-400 dark:text-slate-500 py-3">ยังไม่มีบันทึกประวัติกิจกรรม</p>
               ) : (
                 transactions.map(tx => {
                   const isAdd = tx.action_type === 'ADD' || tx.action_type === 'RESTOCK';
@@ -880,23 +1009,23 @@ export default function App() {
                   const dotColor = isAdd ? 'bg-emerald-600' : isUse ? 'bg-amber-600' : 'bg-rose-600';
 
                   return (
-                    <div key={tx.id} className="relative bg-white border border-stone-200 rounded-xl p-3 text-xs space-y-1 shadow-xs">
-                      <div className={`absolute -left-[27px] top-4 w-3 h-3 rounded-full ${dotColor} border-2 border-white`}></div>
+                    <div key={tx.id} className="relative bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl p-3 text-xs space-y-1 shadow-xs">
+                      <div className={`absolute -left-[27px] top-4 w-3 h-3 rounded-full ${dotColor} border-2 border-white dark:border-slate-900`}></div>
 
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-stone-900 text-sm">
+                        <span className="font-bold text-stone-900 dark:text-white text-sm">
                           {tx.item_name}
-                          <span className={`ml-2 text-[10px] px-2 py-0.2 rounded-full font-bold ${isAdd ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : isUse ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                          <span className={`ml-2 text-[10px] px-2 py-0.2 rounded-full font-bold ${isAdd ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : isUse ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'}`}>
                             {tx.change_amount > 0 ? `+${tx.change_amount}` : tx.change_amount}
                           </span>
                         </span>
-                        <span className="text-[10px] text-stone-400 font-mono">
+                        <span className="text-[10px] text-stone-400 dark:text-slate-500 font-mono">
                           {new Date(tx.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
 
-                      <div className="text-stone-500">
-                        กระทำโดย: <strong className="text-stone-800">{tx.user_name}</strong> ({tx.qty_before} → {tx.qty_after}) {tx.note && `• ${tx.note}`}
+                      <div className="text-stone-500 dark:text-slate-400">
+                        กระทำโดย: <strong className="text-stone-800 dark:text-slate-200">{tx.user_name}</strong> ({tx.qty_before} → {tx.qty_after}) {tx.note && `• ${tx.note}`}
                       </div>
                     </div>
                   );
@@ -909,15 +1038,15 @@ export default function App() {
         {(activeTab === 'members' || activeTab === 'settings') && (
           <div className="space-y-4">
             <div className="glass-card p-4 space-y-3">
-              <h3 className="font-heading font-bold text-base text-stone-900 flex items-center gap-2">
+              <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white flex items-center gap-2">
                 <i className="fa-solid fa-house-user text-emerald-600"></i>
                 <span>ข้อมูลบ้าน ({house.name})</span>
               </h3>
 
-              <div className="bg-stone-50 border border-stone-200 p-3 rounded-xl flex items-center justify-between">
+              <div className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center justify-between">
                 <div>
-                  <div className="text-[11px] text-stone-500">Invitation Code (รหัสเชิญ)</div>
-                  <div className="font-mono text-lg font-bold text-emerald-700">{house.code}</div>
+                  <div className="text-[11px] text-stone-500 dark:text-slate-400">Invitation Code (รหัสเชิญ)</div>
+                  <div className="font-mono text-lg font-bold text-emerald-700 dark:text-emerald-400">{house.code}</div>
                 </div>
                 <button 
                   onClick={() => {
@@ -933,24 +1062,24 @@ export default function App() {
             </div>
 
             <div className="glass-card p-4">
-              <h3 className="font-heading font-bold text-sm text-stone-900 mb-3">
+              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3">
                 สมาชิกในบ้าน ({DEFAULT_MEMBERS.length} / 2 คน)
               </h3>
 
               <div className="space-y-2">
                 {DEFAULT_MEMBERS.map((mem, idx) => (
-                  <div key={mem.id} className="bg-white border border-stone-200 p-3 rounded-xl flex items-center gap-3 shadow-xs">
+                  <div key={mem.id} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
                     <div className="text-2xl">{mem.avatar}</div>
                     <div className="flex-1">
-                      <div className="font-bold text-stone-900 text-xs flex items-center gap-2">
+                      <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
                         {mem.name}
                         {idx === activeUserIndex && (
-                          <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded-full font-bold">
+                          <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
                             กำลังใช้งาน
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-stone-500">{mem.email}</div>
+                      <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email}</div>
                     </div>
                   </div>
                 ))}
@@ -958,14 +1087,14 @@ export default function App() {
             </div>
 
             <div className="glass-card p-4 space-y-3">
-              <h3 className="font-heading font-bold text-sm text-stone-900 flex items-center gap-2">
+              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white flex items-center gap-2">
                 <i className="fa-solid fa-cloud text-emerald-600"></i>
                 <span>ตั้งค่า Supabase Cloud Realtime</span>
               </h3>
 
               <div className="space-y-2 text-xs">
                 <div>
-                  <label className="block text-stone-500 mb-1">Supabase URL</label>
+                  <label className="block text-stone-500 dark:text-slate-400 mb-1">Supabase URL</label>
                   <input 
                     type="text"
                     placeholder="https://xyz.supabase.co"
@@ -974,12 +1103,12 @@ export default function App() {
                       setSupabaseUrl(e.target.value);
                       localStorage.setItem('meeyoo_sb_url', e.target.value);
                     }}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-stone-900 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-stone-500 mb-1">Supabase Anon Key</label>
+                  <label className="block text-stone-500 dark:text-slate-400 mb-1">Supabase Anon Key</label>
                   <input 
                     type="password"
                     placeholder="eyJhbGciOi..."
@@ -988,7 +1117,7 @@ export default function App() {
                       setSupabaseKey(e.target.value);
                       localStorage.setItem('meeyoo_sb_key', e.target.value);
                     }}
-                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-stone-900 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2 text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
@@ -1076,36 +1205,36 @@ export default function App() {
       {/* ADD / EDIT MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="glass-card bg-white border border-stone-200 p-5 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto pb-safe">
-            <div className="flex justify-between items-center mb-4 border-b border-stone-100 pb-3">
-              <h3 className="font-heading font-bold text-lg text-stone-900">
+          <div className="glass-card bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 p-5 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto pb-safe">
+            <div className="flex justify-between items-center mb-4 border-b border-stone-100 dark:border-slate-800 pb-3">
+              <h3 className="font-heading font-bold text-lg text-stone-900 dark:text-white">
                 {editingItem ? '✏️ แก้ไขรายละเอียดสินค้า' : '➕ เพิ่มสินค้าใหม่เข้าคลัง'}
               </h3>
-              <button onClick={resetForm} className="text-stone-400 hover:text-stone-800 text-lg p-1">
+              <button onClick={resetForm} className="text-stone-400 hover:text-stone-800 dark:hover:text-white text-lg p-1">
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 
             <form onSubmit={handleSaveItemForm} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">ชื่อสินค้า *</label>
+                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">ชื่อสินค้า *</label>
                 <input 
                   type="text"
                   placeholder="เช่น สบู่ก้อน, ยาสระผม..."
                   value={formName}
                   onChange={e => setFormName(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm text-stone-900 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1 flex items-center justify-between">
+                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                   <span>รหัสบาร์โค้ด (Barcode / QR)</span>
                   <button 
                     type="button"
                     onClick={() => { setShowAddModal(false); setShowScannerModal(true); }}
-                    className="text-emerald-700 text-[11px] font-bold hover:underline flex items-center gap-1"
+                    className="text-emerald-700 dark:text-emerald-400 text-[11px] font-bold hover:underline flex items-center gap-1"
                   >
                     <i className="fa-solid fa-barcode"></i> สแกนด้วยกล้อง
                   </button>
@@ -1115,17 +1244,17 @@ export default function App() {
                   placeholder="เช่น 885000000001 (สแกนหรือพิมพ์ได้)"
                   value={formBarcode}
                   onChange={e => setFormBarcode(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 font-mono focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">หมวดหมู่</label>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">หมวดหมู่</label>
                   <select 
                     value={formCategory}
                     onChange={e => setFormCategory(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-900 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   >
                     <option value="ของใช้ส่วนตัว">ของใช้ส่วนตัว</option>
                     <option value="ของใช้ในบ้าน">ของใช้ในบ้าน</option>
@@ -1136,13 +1265,13 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">หน่วยนับ</label>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">หน่วยนับ</label>
                   <input 
                     type="text"
                     placeholder="ชิ้น, ขวด, ก้อน"
                     value={formUnit}
                     onChange={e => setFormUnit(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-900 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     required
                   />
                 </div>
@@ -1150,39 +1279,39 @@ export default function App() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">จำนวนเริ่มต้น</label>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">จำนวนเริ่มต้น</label>
                   <input 
                     type="number"
                     min="0"
                     value={formQuantity}
                     onChange={e => setFormQuantity(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-900 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">จำนวนขั้นต่ำ (Min Threshold)</label>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">จำนวนขั้นต่ำ (Min Threshold)</label>
                   <input 
                     type="number"
                     min="1"
                     value={formMinThreshold}
                     onChange={e => setFormMinThreshold(e.target.value)}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-900 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">ไอคอนแสดงผล</label>
+                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">ไอคอนแสดงผล</label>
                 <div className="flex gap-2 text-xl overflow-x-auto pb-1">
                   {['🧼', '🧴', '🧻', '✨', '☕', '🥤', '🍞', '📦'].map(ic => (
                     <button
                       key={ic}
                       type="button"
                       onClick={() => setFormIcon(ic)}
-                      className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition ${formIcon === ic ? 'bg-emerald-600 border-emerald-600 text-white scale-105 shadow-xs' : 'bg-stone-50 border-stone-200 text-stone-800'}`}
+                      className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition ${formIcon === ic ? 'bg-emerald-600 border-emerald-600 text-white scale-105 shadow-xs' : 'bg-stone-50 dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-800 dark:text-slate-200'}`}
                     >
                       {ic}
                     </button>
@@ -1190,11 +1319,11 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-stone-100">
+              <div className="flex justify-end gap-3 pt-3 border-t border-stone-100 dark:border-slate-800">
                 <button 
                   type="button" 
                   onClick={resetForm}
-                  className="px-4 py-2.5 rounded-xl border border-stone-200 text-stone-600 text-xs font-semibold"
+                  className="px-4 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-400 text-xs font-semibold"
                 >
                   ยกเลิก
                 </button>

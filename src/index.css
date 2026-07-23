@@ -2,10 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light Theme Variables */
 :root {
   --bg-primary: #faf8f5;
   --bg-secondary: #f4efe8;
   --bg-card: #ffffff;
+  --bg-input: #f5f2eb;
   --border-color: #e8e4df;
   --border-hover: #059669;
 
@@ -15,6 +17,25 @@
 
   --text-main: #1c1917;
   --text-muted: #78716c;
+}
+
+/* Warm Midnight Dark Mode Variables */
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-input: #0f172a;
+  --border-color: #334155;
+  --border-hover: #10b981;
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .pb-safe {
@@ -38,11 +59,11 @@ button:active, .clickable:active {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d6cfc7;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 
-/* Organic Warm Sunlight Ambient Lighting Blobs */
+/* Organic Ambient Lighting Blobs */
 .bg-blobs {
   position: fixed;
   top: 0;
@@ -62,6 +83,10 @@ button:active, .clickable:active {
   animation: blobFloat 25s infinite ease-in-out alternate;
 }
 
+.dark .blob-1 { background: #1e1b4b; }
+.dark .blob-2 { background: #064e3b; }
+.dark .blob-3 { background: #450a0a; }
+
 .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #fef3c7; }
 .blob-2 { bottom: -10%; right: -10%; width: 420px; height: 420px; background: #d1fae5; animation-delay: -9s; }
 .blob-3 { top: 40%; left: 50%; width: 320px; height: 320px; background: #fee2e2; animation-delay: -16s; }
@@ -72,18 +97,17 @@ button:active, .clickable:active {
   100% { transform: translate(-25px, 25px) scale(0.94); }
 }
 
-/* Warm Minimalist Cards */
+/* Cards */
 .glass-card {
-  background: #ffffff;
+  background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 1.25rem;
-  box-shadow: 0 4px 20px -2px rgba(120, 113, 108, 0.06);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.glass-card:hover {
-  border-color: #d6cfc7;
-  box-shadow: 0 8px 25px -4px rgba(120, 113, 108, 0.12);
+.dark .glass-card {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
 }
 
 /* Status Bars */
@@ -97,10 +121,22 @@ button:active, .clickable:active {
   color: #047857;
 }
 
+.dark .badge-normal {
+  background: rgba(6, 78, 59, 0.4);
+  border-color: #047857;
+  color: #34d399;
+}
+
 .badge-low {
   background: #fffbe6;
   border: 1px solid #fde68a;
   color: #b45309;
+}
+
+.dark .badge-low {
+  background: rgba(120, 53, 15, 0.4);
+  border-color: #b45309;
+  color: #fbbf24;
 }
 
 .badge-out {
@@ -109,7 +145,13 @@ button:active, .clickable:active {
   color: #be123c;
 }
 
-/* Touch-Optimized "ใช้ 1" Button (Terracotta / Warm Orange) */
+.dark .badge-out {
+  background: rgba(136, 19, 55, 0.4);
+  border-color: #be123c;
+  color: #f87171;
+}
+
+/* Touch-Optimized "ใช้ 1" Button */
 .btn-use-one {
   background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
   color: #ffffff;
@@ -139,9 +181,9 @@ button:active, .clickable:active {
   width: 42px;
   height: 42px;
   border-radius: 0.85rem;
-  background: #f5f2eb;
-  border: 1px solid #e2dcd3;
-  color: #44403c;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   font-weight: 700;
   font-size: 1.15rem;
   cursor: pointer;
@@ -162,13 +204,13 @@ button:active, .clickable:active {
   cursor: not-allowed;
 }
 
-/* Warm Mobile Bottom Nav */
+/* Mobile Bottom Nav */
 .bottom-nav {
-  background: rgba(255, 253, 250, 0.95);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid #e8e4df;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .bottom-nav-item {
@@ -177,7 +219,7 @@ button:active, .clickable:active {
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.25rem;
-  color: #78716c;
+  color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 600;
   transition: all 0.2s ease;
@@ -186,6 +228,10 @@ button:active, .clickable:active {
 
 .bottom-nav-item.active {
   color: #059669;
+}
+
+.dark .bottom-nav-item.active {
+  color: #34d399;
 }
 
 .bottom-nav-item.active::after {
@@ -198,7 +244,6 @@ button:active, .clickable:active {
   border-radius: 9999px;
 }
 
-/* Pulse indicator */
 .pulse-emerald {
   width: 8px;
   height: 8px;
@@ -212,4 +257,27 @@ button:active, .clickable:active {
   0% { transform: scale(0.95); opacity: 0.8; }
   50% { transform: scale(1.3); opacity: 1; }
   100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* Confetti Particles Container */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.confetti-particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  opacity: 0.9;
+  border-radius: 2px;
+  animation: confettiFall 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
