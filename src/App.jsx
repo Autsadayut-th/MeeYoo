@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarcodeScannerModal } from './components/stock/BarcodeScannerModal';
+import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
+import { JoinHome } from './pages/JoinHome';
+import { CreateHome } from './pages/CreateHome';
 
 const DEFAULT_HOUSE = {
   id: 'h_home_8829',
@@ -120,6 +124,9 @@ export default function App() {
     return saved ? JSON.parse(saved) : DEFAULT_MEMBERS[0];
   });
 
+  // Auth Screen Flow: 'app' | 'login' | 'register' | 'join_home' | 'create_home'
+  const [authView, setAuthView] = useState('app');
+
   // Theme Mode State
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('meeyoo_theme') === 'dark';
@@ -217,7 +224,6 @@ export default function App() {
         const client = window.supabase.createClient(supabaseUrl, supabaseKey);
         setSupabaseClient(client);
 
-        // Fetch auth user session if available
         client.auth.getUser().then(({ data }) => {
           if (data && data.user) {
             setCurrentUser({
@@ -524,6 +530,16 @@ export default function App() {
     setShoppingList(prev => prev.filter(s => s.id !== shopItem.id));
   };
 
+  const handleSignOut = () => {
+    if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+      if (supabaseClient) {
+        supabaseClient.auth.signOut();
+      }
+      localStorage.removeItem('meeyoo_current_user');
+      setAuthView('login');
+    }
+  };
+
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -547,6 +563,23 @@ export default function App() {
 
     return { total, lowCount, outCount, shoppingCount };
   }, [items, shoppingList]);
+
+  // AUTH FLOW ROUTING
+  if (authView === 'login') {
+    return <Login onLoginSuccess={(u) => { setCurrentUser(u); setAuthView('app'); }} onSwitchToRegister={() => setAuthView('register')} />;
+  }
+
+  if (authView === 'register') {
+    return <Register onRegisterSuccess={(u) => { setCurrentUser(u); setAuthView('join_home'); }} onSwitchToLogin={() => setAuthView('login')} />;
+  }
+
+  if (authView === 'join_home') {
+    return <JoinHome onJoinedSuccess={(h) => { setHouse(h); setAuthView('app'); }} onCreateHomeClick={() => setAuthView('create_home')} />;
+  }
+
+  if (authView === 'create_home') {
+    return <CreateHome onCreateSuccess={(h) => { setHouse(h); setAuthView('app'); }} onJoinHomeClick={() => setAuthView('join_home')} />;
+  }
 
   return (
     <div className="min-h-screen relative pb-28 md:pb-8 pt-safe">
@@ -1057,9 +1090,17 @@ export default function App() {
         {(activeTab === 'members' || activeTab === 'settings') && (
           <div className="space-y-4">
             <div className="glass-card p-4 space-y-3">
-              <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white flex items-center gap-2">
-                <i className="fa-solid fa-house-user text-emerald-600"></i>
-                <span>ข้อมูลบ้าน ({house.name})</span>
+              <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-house-user text-emerald-600"></i>
+                  <span>ข้อมูลบ้าน ({house.name})</span>
+                </div>
+                <button 
+                  onClick={() => setAuthView('join_home')}
+                  className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
+                >
+                  ย้าย/เปลี่ยนบ้าน
+                </button>
               </h3>
 
               <div className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center justify-between">
@@ -1081,8 +1122,14 @@ export default function App() {
             </div>
 
             <div className="glass-card p-4">
-              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3">
-                สมาชิกร่วมบ้าน ({DEFAULT_MEMBERS.length} คน)
+              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3 flex items-center justify-between">
+                <span>สมาชิกร่วมบ้าน ({DEFAULT_MEMBERS.length} คน)</span>
+                <button 
+                  onClick={handleSignOut}
+                  className="text-xs text-rose-600 dark:text-rose-400 font-bold hover:underline flex items-center gap-1"
+                >
+                  <i className="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+                </button>
               </h3>
 
               <div className="space-y-2">
