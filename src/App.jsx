@@ -562,11 +562,7 @@ export default function App() {
     return { total, lowCount, outCount, shoppingCount };
   }, [items, shoppingList]);
 
-  // AUTH FLOW ROUTING: If user is not logged in, ALWAYS direct to Login first!
-  if (authView === 'login' || !currentUser) {
-    return <Login onLoginSuccess={(u) => { setCurrentUser(u); setAuthView('app'); }} onSwitchToRegister={() => setAuthView('register')} />;
-  }
-
+  // AUTH FLOW ROUTING: Strictly check authView first to allow navigating to Register / Join Home / Create Home!
   if (authView === 'register') {
     return <Register onRegisterSuccess={(u) => { setCurrentUser(u); setAuthView('join_home'); }} onSwitchToLogin={() => setAuthView('login')} />;
   }
@@ -577,6 +573,10 @@ export default function App() {
 
   if (authView === 'create_home') {
     return <CreateHome onCreateSuccess={(h) => { setHouse(h); setAuthView('app'); }} onJoinHomeClick={() => setAuthView('join_home')} />;
+  }
+
+  if (authView === 'login' || !currentUser) {
+    return <Login onLoginSuccess={(u) => { setCurrentUser(u); setAuthView('app'); }} onSwitchToRegister={() => setAuthView('register')} />;
   }
 
   return (
