@@ -28,9 +28,9 @@ export default function App() {
     return savedUser ? 'app' : 'login';
   });
 
-  // Dynamic Members List in Active House (Empty slate for real production users)
+  // Dynamic Members List in Active House (Only contains actual joined users)
   const [members, setMembers] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_house_members_v2');
+    const saved = localStorage.getItem('meeyoo_house_members_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -40,23 +40,23 @@ export default function App() {
   });
 
   const [house, setHouse] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_active_house_v2');
+    const saved = localStorage.getItem('meeyoo_active_house_v3');
     return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
   });
 
-  // Real Production State: Start empty [] for clean household setup
+  // Real Production State: Strictly start EMPTY [] for all new logins/homes
   const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_items_v2');
+    const saved = localStorage.getItem('meeyoo_items_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_transactions_v2');
+    const saved = localStorage.getItem('meeyoo_transactions_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [shoppingList, setShoppingList] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_shopping_v2');
+    const saved = localStorage.getItem('meeyoo_shopping_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -131,8 +131,12 @@ export default function App() {
       setMembers(prev => {
         const exists = prev.some(m => m.email === currentUser.email);
         if (!exists) {
-          const updated = [...prev, { ...currentUser, role: 'สมาชิกในบ้าน' }];
-          localStorage.setItem('meeyoo_house_members_v2', JSON.stringify(updated));
+          const userWithRole = { 
+            ...currentUser, 
+            role: currentUser.role || 'สมาชิก' 
+          };
+          const updated = [...prev, userWithRole];
+          localStorage.setItem('meeyoo_house_members_v3', JSON.stringify(updated));
           return updated;
         }
         return prev;
@@ -141,18 +145,18 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('meeyoo_items_v2', JSON.stringify(items));
-    localStorage.setItem('meeyoo_transactions_v2', JSON.stringify(transactions));
-    localStorage.setItem('meeyoo_shopping_v2', JSON.stringify(shoppingList));
-    localStorage.setItem('meeyoo_active_house_v2', JSON.stringify(house));
+    localStorage.setItem('meeyoo_items_v3', JSON.stringify(items));
+    localStorage.setItem('meeyoo_transactions_v3', JSON.stringify(transactions));
+    localStorage.setItem('meeyoo_shopping_v3', JSON.stringify(shoppingList));
+    localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(house));
     if (currentUser) {
       localStorage.setItem('meeyoo_current_user', JSON.stringify(currentUser));
     }
-    localStorage.setItem('meeyoo_house_members_v2', JSON.stringify(members));
+    localStorage.setItem('meeyoo_house_members_v3', JSON.stringify(members));
 
     if (window.BroadcastChannel) {
       try {
-        const bc = new BroadcastChannel('meeyoo_realtime_sync_v2');
+        const bc = new BroadcastChannel('meeyoo_realtime_sync_v3');
         bc.postMessage({ type: 'DATA_SYNC' });
         bc.close();
       } catch (e) {}
@@ -161,10 +165,10 @@ export default function App() {
 
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'meeyoo_items_v2' && e.newValue) setItems(JSON.parse(e.newValue));
-      if (e.key === 'meeyoo_transactions_v2' && e.newValue) setTransactions(JSON.parse(e.newValue));
-      if (e.key === 'meeyoo_shopping_v2' && e.newValue) setShoppingList(JSON.parse(e.newValue));
-      if (e.key === 'meeyoo_house_members_v2' && e.newValue) setMembers(JSON.parse(e.newValue));
+      if (e.key === 'meeyoo_items_v3' && e.newValue) setItems(JSON.parse(e.newValue));
+      if (e.key === 'meeyoo_transactions_v3' && e.newValue) setTransactions(JSON.parse(e.newValue));
+      if (e.key === 'meeyoo_shopping_v3' && e.newValue) setShoppingList(JSON.parse(e.newValue));
+      if (e.key === 'meeyoo_house_members_v3' && e.newValue) setMembers(JSON.parse(e.newValue));
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -172,12 +176,12 @@ export default function App() {
     let bc = null;
     if (window.BroadcastChannel) {
       try {
-        bc = new BroadcastChannel('meeyoo_realtime_sync_v2');
+        bc = new BroadcastChannel('meeyoo_realtime_sync_v3');
         bc.onmessage = () => {
-          const i = localStorage.getItem('meeyoo_items_v2');
-          const t = localStorage.getItem('meeyoo_transactions_v2');
-          const s = localStorage.getItem('meeyoo_shopping_v2');
-          const m = localStorage.getItem('meeyoo_house_members_v2');
+          const i = localStorage.getItem('meeyoo_items_v3');
+          const t = localStorage.getItem('meeyoo_transactions_v3');
+          const s = localStorage.getItem('meeyoo_shopping_v3');
+          const m = localStorage.getItem('meeyoo_house_members_v3');
           if (i) setItems(JSON.parse(i));
           if (t) setTransactions(JSON.parse(t));
           if (s) setShoppingList(JSON.parse(s));
@@ -438,9 +442,43 @@ export default function App() {
   const handleSignOut = () => {
     if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
       localStorage.removeItem('meeyoo_current_user');
+      localStorage.removeItem('meeyoo_house_members_v3');
+      localStorage.removeItem('meeyoo_items_v3');
+      localStorage.removeItem('meeyoo_transactions_v3');
+      localStorage.removeItem('meeyoo_shopping_v3');
       setCurrentUser(null);
+      setMembers([]);
+      setItems([]);
+      setTransactions([]);
+      setShoppingList([]);
       setAuthView('login');
     }
+  };
+
+  const handleHomeCreated = (newHouse) => {
+    setHouse(newHouse);
+    if (currentUser) {
+      const ownerUser = { ...currentUser, role: 'เจ้าของบ้าน', avatar: '👨‍💻' };
+      setCurrentUser(ownerUser);
+      setMembers([ownerUser]);
+    }
+    setItems([]);
+    setTransactions([]);
+    setShoppingList([]);
+    setAuthView('app');
+  };
+
+  const handleHomeJoined = (joinedHouse) => {
+    setHouse(joinedHouse);
+    if (currentUser) {
+      const memberUser = { ...currentUser, role: 'สมาชิก', avatar: '👩‍🎨' };
+      setCurrentUser(memberUser);
+      setMembers(prev => {
+        const exists = prev.some(m => m.email === memberUser.email);
+        return exists ? prev : [...prev, memberUser];
+      });
+    }
+    setAuthView('app');
   };
 
   const filteredItems = useMemo(() => {
@@ -467,17 +505,17 @@ export default function App() {
     return { total, lowCount, outCount, shoppingCount };
   }, [items, shoppingList]);
 
-  // AUTH FLOW ROUTING: Strictly check authView first to allow navigating to Register / Join Home / Create Home!
+  // AUTH FLOW ROUTING
   if (authView === 'register') {
     return <Register onRegisterSuccess={(u) => { setCurrentUser(u); setAuthView('join_home'); }} onSwitchToLogin={() => setAuthView('login')} />;
   }
 
   if (authView === 'join_home') {
-    return <JoinHome onJoinedSuccess={(h) => { setHouse(h); setAuthView('app'); }} onCreateHomeClick={() => setAuthView('create_home')} />;
+    return <JoinHome onJoinedSuccess={handleHomeJoined} onCreateHomeClick={() => setAuthView('create_home')} />;
   }
 
   if (authView === 'create_home') {
-    return <CreateHome onCreateSuccess={(h) => { setHouse(h); setAuthView('app'); }} onJoinHomeClick={() => setAuthView('join_home')} />;
+    return <CreateHome onCreateSuccess={handleHomeCreated} onJoinHomeClick={() => setAuthView('join_home')} />;
   }
 
   if (authView === 'login' || !currentUser) {
@@ -574,7 +612,7 @@ export default function App() {
                 <div className="text-3xl">{currentUser?.avatar || '👤'}</div>
                 <div>
                   <div className="text-xs text-stone-500 dark:text-slate-400">เข้าสู่ระบบในชื่อ:</div>
-                  <div className="font-bold text-stone-900 dark:text-white text-base">{currentUser?.name || 'สมาชิก'}</div>
+                  <div className="font-bold text-stone-900 dark:text-white text-base">{currentUser?.name || 'สมาชิก'} ({currentUser?.role || 'เจ้าของบ้าน'})</div>
                 </div>
               </div>
 
@@ -1049,22 +1087,26 @@ export default function App() {
               </h3>
 
               <div className="space-y-2">
-                {members.map((mem) => (
-                  <div key={mem.id} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
-                    <div className="text-2xl">{mem.avatar || '👤'}</div>
-                    <div className="flex-1">
-                      <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
-                        {mem.name}
-                        {mem.email === currentUser?.email && (
-                          <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
-                            บัญชีของคุณ
-                          </span>
-                        )}
+                {members.length === 0 ? (
+                  <p className="text-xs text-stone-400 dark:text-slate-500 py-2">ยังไม่มีข้อมูลสมาชิก</p>
+                ) : (
+                  members.map((mem) => (
+                    <div key={mem.id || mem.email} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
+                      <div className="text-2xl">{mem.avatar || '👤'}</div>
+                      <div className="flex-1">
+                        <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
+                          {mem.name}
+                          {mem.email === currentUser?.email && (
+                            <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
+                              บัญชีของคุณ ({mem.role || 'เจ้าของบ้าน'})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email} • {mem.role || 'สมาชิก'}</div>
                       </div>
-                      <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email} • {mem.role || 'สมาชิก'}</div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
