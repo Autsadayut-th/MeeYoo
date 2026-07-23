@@ -113,8 +113,12 @@ export default function App() {
   const [supabaseClient, setSupabaseClient] = useState(null);
 
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [activeUserIndex, setActiveUserIndex] = useState(0);
-  const currentUser = DEFAULT_MEMBERS[activeUserIndex];
+  
+  // Real Account Session (Default logged-in user profile)
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('meeyoo_current_user');
+    return saved ? JSON.parse(saved) : DEFAULT_MEMBERS[0];
+  });
 
   // Theme Mode State
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -212,6 +216,19 @@ export default function App() {
       try {
         const client = window.supabase.createClient(supabaseUrl, supabaseKey);
         setSupabaseClient(client);
+
+        // Fetch auth user session if available
+        client.auth.getUser().then(({ data }) => {
+          if (data && data.user) {
+            setCurrentUser({
+              id: data.user.id,
+              name: data.user.user_metadata?.full_name || data.user.email.split('@')[0],
+              email: data.user.email,
+              role: 'สมาชิกในบ้าน',
+              avatar: '👤'
+            });
+          }
+        });
       } catch (err) {
         console.error("Supabase Error:", err);
       }
@@ -223,6 +240,7 @@ export default function App() {
     localStorage.setItem('meeyoo_transactions_v2', JSON.stringify(transactions));
     localStorage.setItem('meeyoo_shopping_v2', JSON.stringify(shoppingList));
     localStorage.setItem('meeyoo_active_house_v2', JSON.stringify(house));
+    localStorage.setItem('meeyoo_current_user', JSON.stringify(currentUser));
 
     if (window.BroadcastChannel) {
       try {
@@ -231,7 +249,7 @@ export default function App() {
         bc.close();
       } catch (e) {}
     }
-  }, [items, transactions, shoppingList, house]);
+  }, [items, transactions, shoppingList, house, currentUser]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -341,7 +359,6 @@ export default function App() {
     }
   };
 
-  // Touch Swipe Gesture Handlers (Fixed to prevent accidental swipes on vertical scroll)
   const handleTouchStart = (e, item) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -353,7 +370,6 @@ export default function App() {
     const diffX = e.changedTouches[0].clientX - touchStartX.current;
     const diffY = e.changedTouches[0].clientY - touchStartY.current;
     
-    // Only trigger horizontal swipe if movement is predominantly horizontal
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 80) {
       if (diffX > 80 && touchCurrentItem.current.quantity > 0) {
         handleQuickUseOne(touchCurrentItem.current);
@@ -559,7 +575,7 @@ export default function App() {
         <div className="blob blob-3"></div>
       </div>
 
-      {/* HEADER NAVBAR WITH THEME TOGGLE */}
+      {/* PRODUCTION HEADER NAVBAR (CLEAN PROFILE & ACTION CONTROLS) */}
       <header className="sticky top-0 z-30 bg-[#faf8f5]/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-[#e8e4df] dark:border-slate-800 px-4 py-3 shadow-xs">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -599,20 +615,16 @@ export default function App() {
               <i className="fa-solid fa-barcode"></i>
             </button>
 
-            {/* USER SWITCHER */}
-            <div className="flex items-center bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-full p-1 shadow-inner">
-              <button 
-                onClick={() => { triggerHaptic(); setActiveUserIndex(0); }}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 0 ? 'bg-emerald-600 text-white shadow' : 'text-stone-500 dark:text-slate-400'}`}
-              >
-                👨‍💻 U1
-              </button>
-              <button 
-                onClick={() => { triggerHaptic(); setActiveUserIndex(1); }}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${activeUserIndex === 1 ? 'bg-amber-600 text-white shadow' : 'text-stone-500 dark:text-slate-400'}`}
-              >
-                👩‍🎨 U2
-              </button>
+            {/* LOGGED IN USER PROFILE BADGE */}
+            <div 
+              onClick={() => setActiveTab('members')}
+              className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-full px-2.5 py-1 text-xs cursor-pointer hover:border-emerald-500 shadow-inner transition"
+              title="ดูโปรไฟล์สมาชิกร่วมบ้าน"
+            >
+              <span className="text-sm">{currentUser.avatar}</span>
+              <span className="font-bold text-stone-800 dark:text-slate-200 hidden sm:inline text-[11px] truncate max-w-[80px]">
+                {currentUser.name.split(' ')[0]}
+              </span>
             </div>
           </div>
         </div>
@@ -625,7 +637,7 @@ export default function App() {
               <div className="flex items-center gap-3">
                 <div className="text-3xl">{currentUser.avatar}</div>
                 <div>
-                  <div className="text-xs text-stone-500 dark:text-slate-400">กำลังใช้งานโดย:</div>
+                  <div className="text-xs text-stone-500 dark:text-slate-400">เข้าสู่ระบบในชื่อ:</div>
                   <div className="font-bold text-stone-900 dark:text-white text-base">{currentUser.name}</div>
                 </div>
               </div>
@@ -1070,23 +1082,23 @@ export default function App() {
 
             <div className="glass-card p-4">
               <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3">
-                สมาชิกในบ้าน ({DEFAULT_MEMBERS.length} / 2 คน)
+                สมาชิกร่วมบ้าน ({DEFAULT_MEMBERS.length} คน)
               </h3>
 
               <div className="space-y-2">
-                {DEFAULT_MEMBERS.map((mem, idx) => (
+                {DEFAULT_MEMBERS.map((mem) => (
                   <div key={mem.id} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
                     <div className="text-2xl">{mem.avatar}</div>
                     <div className="flex-1">
                       <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
                         {mem.name}
-                        {idx === activeUserIndex && (
+                        {mem.email === currentUser.email && (
                           <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
-                            กำลังใช้งาน
+                            บัญชีของคุณ
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email}</div>
+                      <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email} • {mem.role}</div>
                     </div>
                   </div>
                 ))}
