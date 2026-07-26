@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { homeService } from './homeService';
 
 export const shoppingService = {
   async fetchShoppingList(homeId) {
@@ -20,14 +21,16 @@ export const shoppingService = {
   async saveShoppingItem(item, homeId) {
     if (supabase) {
       try {
-        await supabase.from('shopping_list').upsert([{
+        await homeService.ensureHomeExists(homeId);
+        const { error } = await supabase.from('shopping_list').upsert([{
           id: item.id,
           home_id: homeId,
           item_name: item.item_name,
-          quantity_needed: item.quantity_needed,
-          is_purchased: item.is_purchased,
-          auto_added: item.auto_added
+          quantity_needed: Number(item.quantity_needed),
+          is_purchased: Boolean(item.is_purchased),
+          auto_added: Boolean(item.auto_added)
         }]);
+        if (error) console.error("Supabase saveShoppingItem error:", error);
       } catch (e) {
         console.warn("Supabase saveShoppingItem fallback to local:", e);
       }
@@ -37,7 +40,8 @@ export const shoppingService = {
   async deleteShoppingItem(itemId) {
     if (supabase) {
       try {
-        await supabase.from('shopping_list').delete().eq('id', itemId);
+        const { error } = await supabase.from('shopping_list').delete().eq('id', itemId);
+        if (error) console.error("Supabase deleteShoppingItem error:", error);
       } catch (e) {
         console.warn("Supabase deleteShoppingItem fallback to local:", e);
       }

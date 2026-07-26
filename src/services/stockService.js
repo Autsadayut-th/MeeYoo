@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { homeService } from './homeService';
 
 export const stockService = {
   async fetchItems(homeId) {
@@ -10,6 +11,7 @@ export const stockService = {
           .eq('home_id', homeId)
           .order('created_at', { ascending: false });
         if (!error && data) return data;
+        if (error) console.error("Supabase fetchItems error:", error);
       } catch (e) {
         console.warn("Supabase fetchItems fallback to local:", e);
       }
@@ -21,19 +23,28 @@ export const stockService = {
   async saveItem(item, homeId) {
     if (supabase) {
       try {
+        // Ensure home row exists in Supabase DB to prevent FK violation error
+        await homeService.ensureHomeExists(homeId);
+
         const payload = {
           id: item.id,
           home_id: homeId,
           name: item.name,
           category: item.category,
-          quantity: item.quantity,
+          quantity: Number(item.quantity),
           unit: item.unit,
-          min_threshold: item.min_threshold,
-          icon: item.icon,
-          barcode: item.barcode,
+          min_threshold: Number(item.min_threshold),
+          icon: item.icon || '📦',
+          barcode: item.barcode || '',
           updated_at: new Date().toISOString()
         };
-        await supabase.from('items').upsert([payload]);
+
+        const { error } = await supabase.from('items').upsert([payload]);
+        if (error) {
+          console.error("Supabase saveItem Error:", error.message, error.details);
+        } else {
+          console.log("Supabase saveItem Success:", item.name);
+        }
       } catch (e) {
         console.warn("Supabase saveItem fallback to local:", e);
       }
@@ -43,7 +54,8 @@ export const stockService = {
   async deleteItem(itemId) {
     if (supabase) {
       try {
-        await supabase.from('items').delete().eq('id', itemId);
+        const { error } = await supabase.from('items').delete().eq('id', itemId);
+        if (error) console.error("Supabase deleteItem error:", error);
       } catch (e) {
         console.warn("Supabase deleteItem fallback to local:", e);
       }

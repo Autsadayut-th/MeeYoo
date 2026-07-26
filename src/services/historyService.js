@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { homeService } from './homeService';
 
 export const historyService = {
   async fetchHistory(homeId) {
@@ -21,17 +22,19 @@ export const historyService = {
   async addTransaction(tx, homeId) {
     if (supabase) {
       try {
-        await supabase.from('stock_transactions').insert([{
+        await homeService.ensureHomeExists(homeId);
+        const { error } = await supabase.from('stock_transactions').insert([{
           id: tx.id,
           home_id: homeId,
           item_name: tx.item_name,
           user_name: tx.user_name,
           action_type: tx.action_type,
-          qty_before: tx.qty_before,
-          qty_after: tx.qty_after,
-          change_amount: tx.change_amount,
+          qty_before: Number(tx.qty_before),
+          qty_after: Number(tx.qty_after),
+          change_amount: Number(tx.change_amount),
           note: tx.note || ''
         }]);
+        if (error) console.error("Supabase addTransaction error:", error);
       } catch (e) {
         console.warn("Supabase addTransaction fallback to local:", e);
       }

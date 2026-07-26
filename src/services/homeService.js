@@ -7,6 +7,22 @@ export const homeService = {
     return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
   },
 
+  async ensureHomeExists(homeId = 'h_home_8829', name = 'บ้านของเรา 🏡', code = 'HOME-8829') {
+    if (!supabase) return;
+    try {
+      const { data } = await supabase.from('homes').select('id').eq('id', homeId).single();
+      if (!data) {
+        await supabase.from('homes').upsert([{
+          id: homeId,
+          name: name,
+          invite_code: code
+        }]);
+      }
+    } catch (e) {
+      console.warn("Supabase ensureHomeExists warning:", e);
+    }
+  },
+
   async createHome(homeName, user) {
     const code = 'HOME-' + Math.floor(1000 + Math.random() * 9000);
     const newHome = {
@@ -19,13 +35,15 @@ export const homeService = {
 
     if (supabase) {
       try {
-        await supabase.from('homes').insert([{
+        const { error } = await supabase.from('homes').upsert([{
           id: newHome.id,
           name: homeName.trim(),
           invite_code: code
         }]);
+        if (error) console.error("Supabase createHome error:", error);
+
         if (user) {
-          await supabase.from('home_members').insert([{
+          await supabase.from('home_members').upsert([{
             home_id: newHome.id,
             user_id: user.id,
             user_email: user.email,
@@ -78,7 +96,7 @@ export const homeService = {
           .from('home_members')
           .select('*')
           .eq('home_id', homeId);
-        if (data && data.length > 0) return data;
+        if (!error && data && data.length > 0) return data;
       } catch (err) {
         console.warn("Supabase fetchMembers fallback to local:", err);
       }
