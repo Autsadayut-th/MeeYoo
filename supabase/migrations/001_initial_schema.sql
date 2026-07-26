@@ -1,36 +1,31 @@
--- Enable UUID Extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 1. PROFILES TABLE
-CREATE TABLE public.profiles (
+-- 1. PROFILES TABLE (เก็บโปรไฟล์ผู้ใช้)
+CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     full_name TEXT,
-    avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. HOMES TABLE
-CREATE TABLE public.homes (
+-- 2. HOMES TABLE (เก็บข้อมูลบ้าน)
+CREATE TABLE IF NOT EXISTS public.homes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     invite_code TEXT UNIQUE NOT NULL,
-    created_by UUID REFERENCES public.profiles(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. HOME_MEMBERS TABLE
-CREATE TABLE public.home_members (
+-- 3. HOME_MEMBERS TABLE (เก็บความสัมพันธ์สมาชิกในบ้าน)
+CREATE TABLE IF NOT EXISTS public.home_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     home_id UUID REFERENCES public.homes(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-    role TEXT DEFAULT 'member', -- 'owner' | 'member'
+    role TEXT DEFAULT 'member',
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     UNIQUE(home_id, user_id)
 );
 
--- 4. ITEMS TABLE
-CREATE TABLE public.items (
+-- 4. ITEMS TABLE (เก็บสต็อกสินค้า)
+CREATE TABLE IF NOT EXISTS public.items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     home_id UUID REFERENCES public.homes(id) ON DELETE CASCADE NOT NULL,
     name TEXT NOT NULL,
@@ -39,21 +34,18 @@ CREATE TABLE public.items (
     unit TEXT DEFAULT 'ชิ้น',
     min_threshold INT DEFAULT 1 CHECK (min_threshold >= 0),
     icon TEXT DEFAULT '📦',
-    image_url TEXT,
-    created_by UUID REFERENCES public.profiles(id),
+    barcode TEXT DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 5. STOCK_TRANSACTIONS TABLE
-CREATE TABLE public.stock_transactions (
+-- 5. STOCK_TRANSACTIONS TABLE (เก็บประวัติกิจกรรม)
+CREATE TABLE IF NOT EXISTS public.stock_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     home_id UUID REFERENCES public.homes(id) ON DELETE CASCADE NOT NULL,
-    item_id UUID REFERENCES public.items(id) ON DELETE SET NULL,
     item_name TEXT NOT NULL,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     user_name TEXT NOT NULL,
-    action_type TEXT NOT NULL, -- 'ADD', 'USE', 'UPDATE', 'DELETE', 'RESTOCK'
+    action_type TEXT NOT NULL,
     qty_before INT NOT NULL,
     qty_after INT NOT NULL,
     change_amount INT NOT NULL,
@@ -61,11 +53,10 @@ CREATE TABLE public.stock_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 6. SHOPPING_LIST TABLE
-CREATE TABLE public.shopping_list (
+-- 6. SHOPPING_LIST TABLE (เก็บรายการซื้อของ)
+CREATE TABLE IF NOT EXISTS public.shopping_list (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     home_id UUID REFERENCES public.homes(id) ON DELETE CASCADE NOT NULL,
-    item_id UUID REFERENCES public.items(id) ON DELETE SET NULL,
     item_name TEXT NOT NULL,
     quantity_needed INT DEFAULT 1,
     is_purchased BOOLEAN DEFAULT FALSE,
@@ -73,5 +64,51 @@ CREATE TABLE public.shopping_list (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable Supabase Realtime for Tables
-ALTER PUBLICATION supabase_realtime ADD TABLE items, stock_transactions, shopping_list;
+-- เปิดใช้งาน RLS บนทุกตาราง
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.homes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.home_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stock_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shopping_list ENABLE ROW LEVEL SECURITY;
+
+-- ลบ Policy เดิมก่อนเพื่อป้องกันการซ้ำซ้อน
+DROP POLICY IF EXISTS "Allow public all access on profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow public all access on homes" ON public.homes;
+DROP POLICY IF EXISTS "Allow public all access on home_members" ON public.home_members;
+DROP POLICY IF EXISTS "Allow public all access on items" ON public.items;
+DROP POLICY IF EXISTS "Allow public all access on stock_transactions" ON public.stock_transactions;
+DROP POLICY IF EXISTS "Allow public all access on shopping_list" ON public.shopping_list;
+
+-- สร้าง Policy ปลดล็อกสิทธิ์ให้แอป MeeYoo อ่าน/เขียน/ลบ ได้ 100%
+CREATE POLICY "Allow public all access on profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all access on homes" ON public.homes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all access on home_members" ON public.home_members FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all access on items" ON public.items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all access on stock_transactions" ON public.stock_transactions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all access on shopping_list" ON public.shopping_list FOR ALL USING (true) WITH CHECK (true);
+
+-- เปิดระบบ REALTIME ให้ตารางซิงค์สด (แบบปลอดภัย)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'items'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE items;
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'stock_transactions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE stock_transactions;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'shopping_list'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE shopping_list;
+  END IF;
+END $$;
