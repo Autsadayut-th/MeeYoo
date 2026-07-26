@@ -2,9 +2,19 @@ import { supabase } from './supabaseClient';
 
 export const authService = {
   async signInWithGoogle() {
-    if (!supabase) {
-      return { user: { id: 'u_google_' + Date.now(), email: 'demo.user@gmail.com', name: 'Google User', avatar: '🌐' } };
+    const isDemoKey = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('meeyoo-demo.supabase.co');
+
+    if (!supabase || isDemoKey) {
+      return { 
+        user: { 
+          id: 'u_google_' + Date.now(), 
+          email: 'google.user@gmail.com', 
+          name: 'Google User 🌐', 
+          avatar: '👨‍💻' 
+        } 
+      };
     }
+    
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -16,8 +26,14 @@ export const authService = {
       return data;
     } catch (err) {
       console.warn("Supabase Google Auth fallback to local demo:", err);
-      // Fallback for seamless demo testing if Google provider is not enabled in Supabase dashboard yet
-      return { user: { id: 'u_google_' + Date.now(), email: 'demo.user@gmail.com', name: 'Google User', avatar: '🌐' } };
+      return { 
+        user: { 
+          id: 'u_google_' + Date.now(), 
+          email: 'google.user@gmail.com', 
+          name: 'Google User 🌐', 
+          avatar: '👨‍💻' 
+        } 
+      };
     }
   },
 
