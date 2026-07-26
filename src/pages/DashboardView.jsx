@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function DashboardView({ currentUser, house, stats, items, setActiveTab, resetForm, setShowAddModal, handleQuickUseOne, triggerHaptic }) {
+export function DashboardView({ currentUser, house, stats, items, setActiveTab, resetForm, setShowAddModal, handleQuickUseOne, onOpenInviteModal, triggerHaptic }) {
   return (
     <div className="space-y-5">
       <div className="glass-card p-4 flex items-center justify-between bg-gradient-to-r from-emerald-50 via-teal-50 to-stone-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 border-emerald-200 dark:border-slate-700">
@@ -17,12 +17,12 @@ export function DashboardView({ currentUser, house, stats, items, setActiveTab, 
         <button 
           onClick={() => {
             if (triggerHaptic) triggerHaptic();
-            navigator.clipboard.writeText(house.code);
-            alert(`คัดลอกรหัสเชิญ ${house.code} เรียบร้อย!`);
+            if (onOpenInviteModal) onOpenInviteModal();
           }}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition flex items-center gap-1.5"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition flex items-center gap-1.5 active:scale-95"
         >
-          <i className="fa-solid fa-share-nodes"></i> แชร์รหัสเชิญ
+          <i className="fa-solid fa-qrcode text-sm"></i>
+          <span>เชิญสมาชิก / QR Code</span>
         </button>
       </div>
 

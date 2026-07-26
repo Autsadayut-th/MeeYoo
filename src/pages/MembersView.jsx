@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function MembersView({ house, setAuthView, currentUser, members, handleSignOut, triggerHaptic }) {
+export function MembersView({ house, setAuthView, currentUser, members, handleSignOut, onOpenInviteModal, triggerHaptic }) {
   return (
     <div className="space-y-4">
       <div className="glass-card p-4 space-y-3">
@@ -17,21 +17,24 @@ export function MembersView({ house, setAuthView, currentUser, members, handleSi
           </button>
         </h3>
 
-        <div className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center justify-between">
+        <div className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 p-3.5 rounded-xl flex items-center justify-between">
           <div>
             <div className="text-[11px] text-stone-500 dark:text-slate-400">Invitation Code (รหัสเชิญ)</div>
             <div className="font-mono text-lg font-bold text-emerald-700 dark:text-emerald-400">{house.code}</div>
           </div>
-          <button 
-            onClick={() => {
-              if (triggerHaptic) triggerHaptic();
-              navigator.clipboard.writeText(house.code);
-              alert(`คัดลอกรหัสเชิญ ${house.code} เรียบร้อย!`);
-            }}
-            className="bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-xs"
-          >
-            <i className="fa-solid fa-copy"></i> คัดลอกรหัส
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => {
+                if (triggerHaptic) triggerHaptic();
+                if (onOpenInviteModal) onOpenInviteModal();
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-xs flex items-center gap-1.5 transition"
+            >
+              <i className="fa-solid fa-qrcode text-sm"></i>
+              <span>แสดง QR Code</span>
+            </button>
+          </div>
         </div>
       </div>
 

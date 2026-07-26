@@ -1,9 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { homeService } from '../services/homeService';
 
 export function JoinHome({ currentUser, onJoinedSuccess, onCreateHomeClick }) {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Auto-detect join code from URL parameter (?join_code=HOME-8829 or ?code=HOME-8829)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const codeFromUrl = params.get('join_code') || params.get('code');
+      if (codeFromUrl) {
+        setInviteCode(codeFromUrl.toUpperCase().trim());
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +46,7 @@ export function JoinHome({ currentUser, onJoinedSuccess, onCreateHomeClick }) {
             <i className="fa-solid fa-house-user"></i>
           </div>
           <h1 className="font-heading font-extrabold text-2xl text-stone-900 dark:text-white">เข้าร่วมบ้านเดียวกัน</h1>
-          <p className="text-xs text-stone-500 dark:text-slate-400">กรอกรหัสเชิญ Invitation Code จากคู่ของคุณเพื่อแชร์คลังของใช้ร่วมกัน</p>
+          <p className="text-xs text-stone-500 dark:text-slate-400">กรอกรหัสเชิญ หรือสแกน QR Code เพื่อแชร์คลังของใช้ร่วมกันในบ้าน</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

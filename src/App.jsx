@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarcodeScannerModal } from './components/stock/BarcodeScannerModal';
 import { AddEditStockModal } from './components/stock/AddEditStockModal';
+import { InviteModal } from './components/home/InviteModal';
 import { Header } from './components/layout/Header';
 import { Navigation } from './components/layout/Navigation';
 
@@ -81,6 +82,7 @@ export default function App() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
   const [formName, setFormName] = useState('');
@@ -616,6 +618,7 @@ export default function App() {
             resetForm={resetForm}
             setShowAddModal={setShowAddModal}
             handleQuickUseOne={handleQuickUseOne}
+            onOpenInviteModal={() => setShowInviteModal(true)}
             triggerHaptic={triggerHaptic}
           />
         )}
@@ -665,6 +668,7 @@ export default function App() {
             currentUser={currentUser}
             members={members}
             handleSignOut={handleSignOut}
+            onOpenInviteModal={() => setShowInviteModal(true)}
             triggerHaptic={triggerHaptic}
           />
         )}
@@ -685,6 +689,13 @@ export default function App() {
         setActiveTab={setActiveTab}
         shoppingCount={stats.shoppingCount}
         triggerHaptic={triggerHaptic}
+      />
+
+      {/* HOUSEHOLD INVITE MODAL (QR CODE & SHARE LINK) */}
+      <InviteModal 
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        house={house}
       />
 
       {/* BARCODE SCANNER MODAL */}
