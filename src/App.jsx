@@ -181,15 +181,53 @@ export default function App() {
   // Initial Fetch & Supabase Realtime Websocket Subscriptions for Multi-device Sync!
   useEffect(() => {
     if (house && house.id) {
+      // Smart Fetch with Cloud Sync Shield
       stockService.fetchItems(house.id).then(cloudItems => {
-        if (cloudItems) setItems(cloudItems);
+        if (cloudItems && cloudItems.length > 0) {
+          setItems(cloudItems);
+        } else {
+          // If cloud has 0 items, check if local storage has items and upload to cloud
+          const saved = localStorage.getItem('meeyoo_items_v3');
+          if (saved) {
+            const localItems = JSON.parse(saved);
+            if (localItems && localItems.length > 0) {
+              setItems(localItems);
+              localItems.forEach(item => stockService.saveItem(item, house.id));
+            }
+          }
+        }
       });
+
       historyService.fetchHistory(house.id).then(cloudHistory => {
-        if (cloudHistory) setTransactions(cloudHistory);
+        if (cloudHistory && cloudHistory.length > 0) {
+          setTransactions(cloudHistory);
+        } else {
+          const saved = localStorage.getItem('meeyoo_transactions_v3');
+          if (saved) {
+            const localTx = JSON.parse(saved);
+            if (localTx && localTx.length > 0) {
+              setTransactions(localTx);
+              localTx.forEach(tx => historyService.addTransaction(tx, house.id));
+            }
+          }
+        }
       });
+
       shoppingService.fetchShoppingList(house.id).then(cloudShopping => {
-        if (cloudShopping) setShoppingList(cloudShopping);
+        if (cloudShopping && cloudShopping.length > 0) {
+          setShoppingList(cloudShopping);
+        } else {
+          const saved = localStorage.getItem('meeyoo_shopping_v3');
+          if (saved) {
+            const localList = JSON.parse(saved);
+            if (localList && localList.length > 0) {
+              setShoppingList(localList);
+              localList.forEach(item => shoppingService.saveShoppingItem(item, house.id));
+            }
+          }
+        }
       });
+
       homeService.fetchMembers(house.id).then(fetched => {
         if (fetched && fetched.length > 0) {
           setMembers(fetched);
@@ -199,9 +237,17 @@ export default function App() {
         }
       });
 
-      const subItems = stockService.subscribeToItems(house.id, (newItems) => setItems(newItems));
-      const subTx = historyService.subscribeToHistory(house.id, (newTx) => setTransactions(newTx));
-      const subShop = shoppingService.subscribeToShopping(house.id, (newShop) => setShoppingList(newShop));
+      const subItems = stockService.subscribeToItems(house.id, (newItems) => {
+        if (newItems && newItems.length > 0) setItems(newItems);
+      });
+
+      const subTx = historyService.subscribeToHistory(house.id, (newTx) => {
+        if (newTx && newTx.length > 0) setTransactions(newTx);
+      });
+
+      const subShop = shoppingService.subscribeToShopping(house.id, (newShop) => {
+        if (newShop && newShop.length > 0) setShoppingList(newShop);
+      });
 
       return () => {
         if (subItems) subItems.unsubscribe();
