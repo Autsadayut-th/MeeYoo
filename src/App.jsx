@@ -1,13 +1,25 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarcodeScannerModal } from './components/stock/BarcodeScannerModal';
+import { AddEditStockModal } from './components/stock/AddEditStockModal';
+import { Header } from './components/layout/Header';
+import { Navigation } from './components/layout/Navigation';
+
 import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { JoinHome } from './pages/JoinHome';
 import { CreateHome } from './pages/CreateHome';
+
+import { DashboardView } from './pages/DashboardView';
+import { StockView } from './pages/StockView';
+import { ShoppingView } from './pages/ShoppingView';
+import { HistoryView } from './pages/HistoryView';
+import { MembersView } from './pages/MembersView';
+
 import { homeService } from './services/homeService';
 import { stockService } from './services/stockService';
 import { historyService } from './services/historyService';
 import { shoppingService } from './services/shoppingService';
+import { supabase } from './services/supabaseClient';
 
 const DEFAULT_HOUSE = {
   id: 'h_home_8829',
@@ -115,6 +127,41 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Listen for Supabase Google OAuth Redirect Sign-In Session Return
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && session.user) {
+          const u = session.user;
+          const userObj = {
+            id: u.id,
+            email: u.email || 'google.user@gmail.com',
+            name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Google User'),
+            avatar: '👨‍💻'
+          };
+          setCurrentUser(userObj);
+          setAuthView('app');
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session && session.user) {
+          const u = session.user;
+          const userObj = {
+            id: u.id,
+            email: u.email || 'google.user@gmail.com',
+            name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Google User'),
+            avatar: '👨‍💻'
+          };
+          setCurrentUser(userObj);
+          setAuthView('app');
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    }
+  }, []);
+
   const triggerConfetti = () => {
     const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6'];
     const particles = Array.from({ length: 40 }).map((_, i) => ({
@@ -132,7 +179,6 @@ export default function App() {
   // Initial Fetch & Supabase Realtime Websocket Subscriptions for Multi-device Sync!
   useEffect(() => {
     if (house && house.id) {
-      // 1. Fetch initial Cloud data
       stockService.fetchItems(house.id).then(cloudItems => {
         if (cloudItems) setItems(cloudItems);
       });
@@ -151,7 +197,6 @@ export default function App() {
         }
       });
 
-      // 2. Subscribe to Realtime Cloud channels
       const subItems = stockService.subscribeToItems(house.id, (newItems) => setItems(newItems));
       const subTx = historyService.subscribeToHistory(house.id, (newTx) => setTransactions(newTx));
       const subShop = shoppingService.subscribeToShopping(house.id, (newShop) => setShoppingList(newShop));
@@ -549,586 +594,83 @@ export default function App() {
         <div className="blob blob-3"></div>
       </div>
 
-      {/* PRODUCTION HEADER NAVBAR */}
-      <header className="sticky top-0 z-30 bg-[#faf8f5]/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-[#e8e4df] dark:border-slate-800 px-4 py-3 shadow-xs">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white text-lg shadow-md shadow-emerald-600/20 shrink-0">
-              <i className="fa-solid fa-boxes-stacked"></i>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-extrabold text-stone-900 dark:text-white text-base leading-tight">MeeYoo</span>
-                <div className="pulse-emerald" title="Real-time Sync Active"></div>
-              </div>
-              <div className="text-xs text-stone-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                <span>{house.name}</span>
-                <span className="text-[10px] bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 px-1.5 py-0.2 rounded font-mono">
-                  {house.code}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* DARK / LIGHT MODE TOGGLE */}
-            <button
-              onClick={toggleDarkMode}
-              className="w-9 h-9 rounded-full bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-700 dark:text-amber-300 flex items-center justify-center text-sm shadow-xs transition"
-              title={isDarkMode ? 'สลับเป็น Warm Light Mode' : 'สลับเป็น Warm Dark Mode'}
-            >
-              <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
-            </button>
-
-            {/* BARCODE SCANNER BUTTON */}
-            <button 
-              onClick={() => { triggerHaptic(); setShowScannerModal(true); }}
-              className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm shadow-xs"
-              title="สแกนบาร์โค้ดด้วยกล้องมือถือ"
-            >
-              <i className="fa-solid fa-barcode"></i>
-            </button>
-
-            {/* LOGGED IN USER PROFILE BADGE */}
-            <div 
-              onClick={() => setActiveTab('members')}
-              className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-full px-2.5 py-1 text-xs cursor-pointer hover:border-emerald-500 shadow-inner transition"
-              title="ดูโปรไฟล์สมาชิกร่วมบ้าน"
-            >
-              <span className="text-sm">{currentUser?.avatar || '👤'}</span>
-              <span className="font-bold text-stone-800 dark:text-slate-200 hidden sm:inline text-[11px] truncate max-w-[80px]">
-                {currentUser?.name ? currentUser.name.split(' ')[0] : 'สมาชิก'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* MODULAR HEADER COMPONENT */}
+      <Header 
+        house={house}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        onOpenScanner={() => setShowScannerModal(true)}
+        currentUser={currentUser}
+        onSelectMembersTab={() => setActiveTab('members')}
+        triggerHaptic={triggerHaptic}
+      />
 
       <main className="max-w-4xl mx-auto px-4 pt-4">
         {activeTab === 'dashboard' && (
-          <div className="space-y-5">
-            <div className="glass-card p-4 flex items-center justify-between bg-gradient-to-r from-emerald-50 via-teal-50 to-stone-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 border-emerald-200 dark:border-slate-700">
-              <div className="flex items-center gap-3">
-                <div className="text-3xl">{currentUser?.avatar || '👤'}</div>
-                <div>
-                  <div className="text-xs text-stone-500 dark:text-slate-400">เข้าสู่ระบบในชื่อ:</div>
-                  <div className="font-bold text-stone-900 dark:text-white text-base">{currentUser?.name || 'สมาชิก'} ({currentUser?.role || 'เจ้าของบ้าน'})</div>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => {
-                  triggerHaptic();
-                  navigator.clipboard.writeText(house.code);
-                  alert(`คัดลอกรหัสเชิญ ${house.code} เรียบร้อย!`);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition flex items-center gap-1.5"
-              >
-                <i className="fa-solid fa-share-nodes"></i> แชร์รหัสเชิญ
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="glass-card p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-stone-500 dark:text-slate-400 font-medium">📦 สินค้าทั้งหมด</span>
-                  <i className="fa-solid fa-boxes-stacked text-emerald-600 text-sm"></i>
-                </div>
-                <div className="font-heading text-2xl font-extrabold text-stone-900 dark:text-white mt-1">{stats.total}</div>
-                <div className="text-[10px] text-stone-500 dark:text-slate-400 mt-0.5">รายการในบ้าน</div>
-              </div>
-
-              <div className="glass-card p-4 border-amber-200 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-950/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">⚠️ ใกล้หมด</span>
-                  <i className="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
-                </div>
-                <div className="font-heading text-2xl font-extrabold text-amber-800 dark:text-amber-300 mt-1">{stats.lowCount}</div>
-                <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">น้อยกว่าขั้นต่ำ</div>
-              </div>
-
-              <div className="glass-card p-4 border-rose-200 dark:border-rose-900/50 bg-rose-50/30 dark:bg-rose-950/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-rose-700 dark:text-rose-400 font-medium">🔴 หมดแล้ว</span>
-                  <i className="fa-solid fa-circle-xmark text-rose-600 text-sm"></i>
-                </div>
-                <div className="font-heading text-2xl font-extrabold text-rose-800 dark:text-rose-300 mt-1">{stats.outCount}</div>
-                <div className="text-[10px] text-rose-700/80 dark:text-rose-400/80 mt-0.5">จำนวนคงเหลือ 0</div>
-              </div>
-
-              <div className="glass-card p-4 border-teal-200 dark:border-teal-900/50 bg-teal-50/30 dark:bg-teal-950/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-teal-700 dark:text-teal-400 font-medium">🛒 รายการซื้อ</span>
-                  <i className="fa-solid fa-cart-shopping text-teal-600 text-sm"></i>
-                </div>
-                <div className="font-heading text-2xl font-extrabold text-teal-800 dark:text-teal-300 mt-1">{stats.shoppingCount}</div>
-                <div className="text-[10px] text-teal-700/80 dark:text-teal-400/80 mt-0.5">ต้องซื้อเข้าบ้าน</div>
-              </div>
-            </div>
-
-            <div className="glass-card p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white flex items-center gap-2">
-                  <i className="fa-solid fa-layer-group text-emerald-600"></i>
-                  <span>รายการสินค้าในบ้าน</span>
-                </h3>
-                <button 
-                  onClick={() => { triggerHaptic(); setActiveTab('stock'); }}
-                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
-                >
-                  ดูทั้งหมด ({items.length}) <i className="fa-solid fa-chevron-right text-[10px] ml-0.5"></i>
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {items.length === 0 ? (
-                  <div className="py-8 text-center text-stone-400 dark:text-slate-500 space-y-2">
-                    <i className="fa-solid fa-box-open text-3xl text-stone-300 dark:text-slate-600"></i>
-                    <p className="text-xs">ยังไม่มีสินค้าในบ้านหลังนี้</p>
-                    <button 
-                      onClick={() => { resetForm(); setShowAddModal(true); }}
-                      className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
-                    >
-                      + กดเพิ่มสินค้าใหม่เข้าคลัง
-                    </button>
-                  </div>
-                ) : (
-                  items.slice(0, 5).map(item => {
-                    const isOut = item.quantity === 0;
-                    const isLow = item.quantity <= item.min_threshold && !isOut;
-                    const gaugePct = Math.min(100, Math.round((item.quantity / (item.min_threshold * 2)) * 100));
-
-                    return (
-                      <div key={item.id} className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0 shadow-xs">
-                              {item.icon || '📦'}
-                            </div>
-                            <div className="overflow-hidden">
-                              <div className="font-bold text-sm text-stone-900 dark:text-white truncate">{item.name}</div>
-                              <div className="text-[11px] text-stone-500 dark:text-slate-400 flex items-center gap-2">
-                                <span>{item.category}</span>
-                                <span className={`px-1.5 py-0.2 rounded-full font-bold text-[10px] ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
-                                  {isOut ? '🔴 หมด' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 shrink-0">
-                            <div className="text-right">
-                              <span className="font-heading font-extrabold text-lg text-stone-900 dark:text-white">{item.quantity}</span>
-                              <span className="text-xs text-stone-500 dark:text-slate-400 ml-1">{item.unit}</span>
-                            </div>
-
-                            <button 
-                              onClick={() => handleQuickUseOne(item)}
-                              disabled={isOut}
-                              className="btn-use-one text-xs px-3 py-1.5"
-                            >
-                              <i className="fa-solid fa-hand-holding"></i> ใช้ 1
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* VISUAL PROGRESS GAUGE BAR */}
-                        <div className="w-full bg-stone-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-500 ${isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${gaugePct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
+          <DashboardView 
+            currentUser={currentUser}
+            house={house}
+            stats={stats}
+            items={items}
+            setActiveTab={setActiveTab}
+            resetForm={resetForm}
+            setShowAddModal={setShowAddModal}
+            handleQuickUseOne={handleQuickUseOne}
+            triggerHaptic={triggerHaptic}
+          />
         )}
 
         {activeTab === 'stock' && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"></i>
-                  <input 
-                    type="text" 
-                    placeholder="ค้นหาชื่อสินค้า หมวดหมู่ หรือบาร์โค้ด..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-xs"
-                  />
-                </div>
-
-                <button 
-                  onClick={() => { triggerHaptic(); setShowScannerModal(true); }}
-                  className="bg-emerald-600 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xs shrink-0"
-                >
-                  <i className="fa-solid fa-barcode text-sm"></i> สแกน
-                </button>
-              </div>
-
-              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                {categoriesList.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => { triggerHaptic(); setSelectedCategory(cat); }}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition ${selectedCategory === cat ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300'}`}
-                  >
-                    {cat === 'ALL' ? 'ทุกหมวดหมู่' : cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {filteredItems.length === 0 ? (
-                <div className="glass-card p-8 text-center text-stone-400 space-y-2">
-                  <i className="fa-solid fa-box-open text-3xl text-stone-400"></i>
-                  <p className="text-sm">ยังไม่มีรายการสินค้าในคลัง</p>
-                  <button 
-                    onClick={() => { resetForm(); setShowAddModal(true); }}
-                    className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
-                  >
-                    + เพิ่มสินค้าใหม่เข้าคลัง
-                  </button>
-                </div>
-              ) : (
-                filteredItems.map(item => {
-                  const isOut = item.quantity === 0;
-                  const isLow = item.quantity <= item.min_threshold && !isOut;
-                  const statusBarClass = isOut ? 'status-bar-out' : isLow ? 'status-bar-low' : 'status-bar-ok';
-                  const gaugePct = Math.min(100, Math.round((item.quantity / (item.min_threshold * 2)) * 100));
-
-                  return (
-                    <div 
-                      key={item.id} 
-                      onTouchStart={e => handleTouchStart(e, item)}
-                      onTouchEnd={handleTouchEnd}
-                      className="glass-card relative overflow-hidden p-4 space-y-3 touch-pan-y"
-                    >
-                      <div className={`absolute top-0 left-0 right-0 h-1 ${statusBarClass}`}></div>
-
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-stone-100 dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-2xl shrink-0">
-                            {item.icon || '📦'}
-                          </div>
-                          <div>
-                            <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white">{item.name}</h3>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 px-2 py-0.3 rounded-full text-stone-600 dark:text-slate-400">
-                                {item.category}
-                              </span>
-                              <span className={`text-[10px] px-2 py-0.3 rounded-full font-bold ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
-                                {isOut ? '🔴 หมดแล้ว' : isLow ? '⚠️ ใกล้หมด' : 'ปกติ'}
-                              </span>
-                              {item.barcode && (
-                                <span className="text-[9px] font-mono bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-slate-400 px-1.5 py-0.2 rounded border border-stone-200 dark:border-slate-700">
-                                  <i className="fa-solid fa-barcode text-[8px] mr-1"></i>{item.barcode}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={() => openEditModal(item)}
-                            className="text-stone-400 hover:text-emerald-600 p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-800 text-sm"
-                            title="แก้ไข (หรือปัดซ้าย)"
-                          >
-                            <i className="fa-solid fa-pen-to-square"></i>
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteItem(item)}
-                            className="text-stone-400 hover:text-rose-600 p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-slate-800 text-sm"
-                            title="ลบ"
-                          >
-                            <i className="fa-solid fa-trash-can"></i>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* VISUAL PROGRESS GAUGE BAR */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] text-stone-400 dark:text-slate-500">
-                          <span>ระดับคลังคงเหลือ</span>
-                          <span>{gaugePct}%</span>
-                        </div>
-                        <div className="w-full bg-stone-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-500 ${isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${gaugePct}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-stone-100 dark:border-slate-700/60 pt-3">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className={`font-heading text-3xl font-extrabold ${isOut ? 'text-rose-600 dark:text-rose-400' : isLow ? 'text-amber-700 dark:text-amber-400' : 'text-stone-900 dark:text-white'}`}>
-                            {item.quantity}
-                          </span>
-                          <span className="text-xs text-stone-500 dark:text-slate-400">{item.unit}</span>
-                          <span className="text-[10px] text-stone-400 dark:text-slate-500 ml-1">(ขั้นต่ำ {item.min_threshold})</span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleQuickUseOne(item)}
-                            disabled={isOut}
-                            className="btn-use-one px-3.5 py-2 text-xs"
-                            title="กดใช้ 1 (หรือปัดการ์ดไปทางขวา 👉)"
-                          >
-                            <i className="fa-solid fa-hand-holding"></i> ใช้ 1
-                          </button>
-
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => handleUpdateQuantity(item, -1)}
-                              disabled={isOut}
-                              className="stepper-btn text-base"
-                            >
-                              -
-                            </button>
-                            <button 
-                              onClick={() => handleUpdateQuantity(item, 1)}
-                              className="stepper-btn text-base"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <StockView 
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            setShowScannerModal={setShowScannerModal}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            categoriesList={categoriesList}
+            filteredItems={filteredItems}
+            resetForm={resetForm}
+            setShowAddModal={setShowAddModal}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            openEditModal={openEditModal}
+            handleDeleteItem={handleDeleteItem}
+            handleQuickUseOne={handleQuickUseOne}
+            handleUpdateQuantity={handleUpdateQuantity}
+            triggerHaptic={triggerHaptic}
+          />
         )}
 
         {activeTab === 'shopping' && (
-          <div className="space-y-4">
-            <div className="glass-card p-4">
-              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3 flex items-center gap-2">
-                <i className="fa-solid fa-cart-plus text-emerald-600"></i>
-                <span>เพิ่มรายการซื้อของด้วยตัวเอง</span>
-              </h3>
-
-              <form onSubmit={handleAddManualShopping} className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="ชื่อสินค้าที่จะซื้อ..."
-                  value={shopItemName}
-                  onChange={e => setShopItemName(e.target.value)}
-                  className="flex-1 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                />
-                <input 
-                  type="number" 
-                  min="1"
-                  placeholder="จำนวน"
-                  value={shopItemQty}
-                  onChange={e => setShopItemQty(e.target.value)}
-                  className="w-16 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-2 py-2 text-xs text-stone-900 dark:text-white text-center focus:outline-none focus:border-emerald-500"
-                />
-                <button 
-                  type="submit"
-                  className="bg-emerald-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs"
-                >
-                  <i className="fa-solid fa-plus"></i> เพิ่ม
-                </button>
-              </form>
-            </div>
-
-            <div className="glass-card p-4">
-              <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white mb-3 flex items-center justify-between">
-                <span>🛒 รายการของที่ต้องซื้อเข้าบ้าน</span>
-                <span className="text-[11px] text-stone-500 dark:text-slate-400">ดึงของใกล้หมดให้อัตโนมัติ</span>
-              </h3>
-
-              <div className="space-y-2.5">
-                {shoppingList.length === 0 ? (
-                  <div className="py-8 text-center text-stone-400 dark:text-slate-500 text-xs">
-                    <i className="fa-solid fa-basket-shopping text-2xl mb-2 text-stone-300 dark:text-slate-600"></i>
-                    <p>ไม่มีรายการที่ต้องซื้อ สินค้าในบ้านยังมีเพียงพอ!</p>
-                  </div>
-                ) : (
-                  shoppingList.map(item => (
-                    <div 
-                      key={item.id}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition ${item.is_purchased ? 'bg-stone-50 dark:bg-slate-900/60 border-stone-200 dark:border-slate-800 opacity-60' : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 shadow-xs'}`}
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <button 
-                          onClick={() => toggleShoppingPurchased(item.id)}
-                          className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition ${item.is_purchased ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-stone-400 text-transparent'}`}
-                        >
-                          <i className="fa-solid fa-check text-xs"></i>
-                        </button>
-                        <div className="overflow-hidden">
-                          <div className={`font-bold text-sm truncate ${item.is_purchased ? 'line-through text-stone-400 dark:text-slate-500' : 'text-stone-900 dark:text-white'}`}>
-                            {item.item_name}
-                          </div>
-                          <div className="text-[10px] text-stone-500 dark:text-slate-400">
-                            {item.auto_added ? '⚡ แจ้งเตือนของใกล้หมด' : '📝 เพิ่มเอง'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="font-bold text-xs text-stone-700 dark:text-slate-300">ต้องซื้อ: {item.quantity_needed}</span>
-                        {item.is_purchased && (
-                          <button 
-                            onClick={() => handleRestockPurchased(item)}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs animate-bounce"
-                          >
-                            <i className="fa-solid fa-box-archive"></i> เติมเข้า Stock 🎉
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+          <ShoppingView 
+            shopItemName={shopItemName}
+            setShopItemName={setShopItemName}
+            shopItemQty={shopItemQty}
+            setShopItemQty={setShopItemQty}
+            handleAddManualShopping={handleAddManualShopping}
+            shoppingList={shoppingList}
+            toggleShoppingPurchased={toggleShoppingPurchased}
+            handleRestockPurchased={handleRestockPurchased}
+          />
         )}
 
         {activeTab === 'history' && (
-          <div className="glass-card p-4">
-            <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white mb-4 flex items-center gap-2">
-              <i className="fa-solid fa-clock-rotate-left text-emerald-600"></i>
-              <span>ประวัติการเปลี่ยนแปลง Stock ทั้งหมด</span>
-            </h3>
-
-            <div className="relative pl-5 border-l-2 border-stone-200 dark:border-slate-700 space-y-4">
-              {transactions.length === 0 ? (
-                <p className="text-xs text-stone-400 dark:text-slate-500 py-3">ยังไม่มีบันทึกประวัติกิจกรรมในบ้านนี้</p>
-              ) : (
-                transactions.map(tx => {
-                  const isAdd = tx.action_type === 'ADD' || tx.action_type === 'RESTOCK';
-                  const isUse = tx.action_type === 'USE';
-                  const dotColor = isAdd ? 'bg-emerald-600' : isUse ? 'bg-amber-600' : 'bg-rose-600';
-
-                  return (
-                    <div key={tx.id} className="relative bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl p-3 text-xs space-y-1 shadow-xs">
-                      <div className={`absolute -left-[27px] top-4 w-3 h-3 rounded-full ${dotColor} border-2 border-white dark:border-slate-900`}></div>
-
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-stone-900 dark:text-white text-sm">
-                          {tx.item_name}
-                          <span className={`ml-2 text-[10px] px-2 py-0.2 rounded-full font-bold ${isAdd ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : isUse ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'}`}>
-                            {tx.change_amount > 0 ? `+${tx.change_amount}` : tx.change_amount}
-                          </span>
-                        </span>
-                        <span className="text-[10px] text-stone-400 dark:text-slate-500 font-mono">
-                          {new Date(tx.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-
-                      <div className="text-stone-500 dark:text-slate-400">
-                        กระทำโดย: <strong className="text-stone-800 dark:text-slate-200">{tx.user_name}</strong> ({tx.qty_before} → {tx.qty_after}) {tx.note && `• ${tx.note}`}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          <HistoryView transactions={transactions} />
         )}
 
         {(activeTab === 'members' || activeTab === 'settings') && (
-          <div className="space-y-4">
-            <div className="glass-card p-4 space-y-3">
-              <h3 className="font-heading font-bold text-base text-stone-900 dark:text-white flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <i className="fa-solid fa-house-user text-emerald-600"></i>
-                  <span>ข้อมูลบ้าน ({house.name})</span>
-                </div>
-                <button 
-                  onClick={() => setAuthView('join_home')}
-                  className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
-                >
-                  ย้าย/เปลี่ยนบ้าน
-                </button>
-              </h3>
-
-              <div className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] text-stone-500 dark:text-slate-400">Invitation Code (รหัสเชิญ)</div>
-                  <div className="font-mono text-lg font-bold text-emerald-700 dark:text-emerald-400">{house.code}</div>
-                </div>
-                <button 
-                  onClick={() => {
-                    triggerHaptic();
-                    navigator.clipboard.writeText(house.code);
-                    alert(`คัดลอกรหัสเชิญ ${house.code} เรียบร้อย!`);
-                  }}
-                  className="bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-xs"
-                >
-                  <i className="fa-solid fa-copy"></i> คัดลอกรหัส
-                </button>
-              </div>
-            </div>
-
-            <div className="glass-card p-4">
-              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white mb-3 flex items-center justify-between">
-                <span>สมาชิกร่วมบ้าน ({members.length} คน)</span>
-                <button 
-                  onClick={handleSignOut}
-                  className="text-xs text-rose-600 dark:text-rose-400 font-bold hover:underline flex items-center gap-1"
-                >
-                  <i className="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
-                </button>
-              </h3>
-
-              <div className="space-y-2">
-                {members.length === 0 ? (
-                  <p className="text-xs text-stone-400 dark:text-slate-500 py-2">ยังไม่มีข้อมูลสมาชิก</p>
-                ) : (
-                  members.map((mem) => (
-                    <div key={mem.id || mem.email || mem.user_email} className="bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 p-3 rounded-xl flex items-center gap-3 shadow-xs">
-                      <div className="text-2xl">{mem.avatar || '👤'}</div>
-                      <div className="flex-1">
-                        <div className="font-bold text-stone-900 dark:text-white text-xs flex items-center gap-2">
-                          {mem.name || mem.user_name}
-                          {(mem.email === currentUser?.email || mem.user_email === currentUser?.email) && (
-                            <span className="text-[9px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
-                              บัญชีของคุณ ({mem.role || 'เจ้าของบ้าน'})
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-stone-500 dark:text-slate-400">{mem.email || mem.user_email} • {mem.role || 'สมาชิก'}</div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="glass-card p-4 space-y-3">
-              <h3 className="font-heading font-bold text-sm text-stone-900 dark:text-white flex items-center gap-2">
-                <i className="fa-solid fa-shield-halved text-emerald-600"></i>
-                <span>สถานะการเชื่อมระบบคลาวด์ (Automatic Realtime Cloud)</span>
-              </h3>
-
-              <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3 rounded-xl text-xs space-y-1">
-                <div className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                  <i className="fa-solid fa-circle-check"></i> เชื่อมต่อ Supabase Cloud อัตโนมัติพร้อมใช้งาน 100%
-                </div>
-                <p className="text-stone-600 dark:text-slate-400 text-[11px]">
-                  ผู้ใช้ทั่วไปสามารถใช้งานตัดสต็อกและซิงค์ข้อมูลผ่านคลาวด์ได้ทันที โดยไม่ต้องตั้งค่าทางเทคนิคใดๆ
-                </p>
-              </div>
-            </div>
-          </div>
+          <MembersView 
+            house={house}
+            setAuthView={setAuthView}
+            currentUser={currentUser}
+            members={members}
+            handleSignOut={handleSignOut}
+            triggerHaptic={triggerHaptic}
+          />
         )}
       </main>
 
+      {/* QUICK FLOATING ADD BUTTON */}
       <button 
         onClick={() => { triggerHaptic(); resetForm(); setShowAddModal(true); }}
         className="fixed right-5 bottom-20 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-600 text-white text-2xl shadow-xl shadow-emerald-600/30 flex items-center justify-center active:scale-95 transition"
@@ -1137,56 +679,13 @@ export default function App() {
         <i className="fa-solid fa-plus"></i>
       </button>
 
-      <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 pb-safe">
-        <div className="max-w-md mx-auto grid grid-cols-5 h-16">
-          <button 
-            onClick={() => { triggerHaptic(); setActiveTab('dashboard'); }}
-            className={`bottom-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          >
-            <i className="fa-solid fa-chart-pie text-lg mb-1"></i>
-            <span>Dashboard</span>
-          </button>
-
-          <button 
-            onClick={() => { triggerHaptic(); setActiveTab('stock'); }}
-            className={`bottom-nav-item ${activeTab === 'stock' ? 'active' : ''}`}
-          >
-            <i className="fa-solid fa-boxes-stacked text-lg mb-1"></i>
-            <span>Stock</span>
-          </button>
-
-          <button 
-            onClick={() => { triggerHaptic(); setActiveTab('shopping'); }}
-            className={`bottom-nav-item ${activeTab === 'shopping' ? 'active' : ''}`}
-          >
-            <div className="relative">
-              <i className="fa-solid fa-cart-shopping text-lg mb-1"></i>
-              {stats.shoppingCount > 0 && (
-                <span className="absolute -top-1 -right-2 bg-amber-500 text-white font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
-                  {stats.shoppingCount}
-                </span>
-              )}
-            </div>
-            <span>Shopping</span>
-          </button>
-
-          <button 
-            onClick={() => { triggerHaptic(); setActiveTab('history'); }}
-            className={`bottom-nav-item ${activeTab === 'history' ? 'active' : ''}`}
-          >
-            <i className="fa-solid fa-clock-rotate-left text-lg mb-1"></i>
-            <span>History</span>
-          </button>
-
-          <button 
-            onClick={() => { triggerHaptic(); setActiveTab('members'); }}
-            className={`bottom-nav-item ${activeTab === 'members' || activeTab === 'settings' ? 'active' : ''}`}
-          >
-            <i className="fa-solid fa-users text-lg mb-1"></i>
-            <span>Members</span>
-          </button>
-        </div>
-      </nav>
+      {/* MODULAR BOTTOM NAVIGATION */}
+      <Navigation 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        shoppingCount={stats.shoppingCount}
+        triggerHaptic={triggerHaptic}
+      />
 
       {/* BARCODE SCANNER MODAL */}
       <BarcodeScannerModal 
@@ -1195,142 +694,28 @@ export default function App() {
         onScanSuccess={handleBarcodeScanned}
       />
 
-      {/* ADD / EDIT MODAL */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="glass-card bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 p-5 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto pb-safe">
-            <div className="flex justify-between items-center mb-4 border-b border-stone-100 dark:border-slate-800 pb-3">
-              <h3 className="font-heading font-bold text-lg text-stone-900 dark:text-white">
-                {editingItem ? '✏️ แก้ไขรายละเอียดสินค้า' : '➕ เพิ่มสินค้าใหม่เข้าคลัง'}
-              </h3>
-              <button onClick={resetForm} className="text-stone-400 hover:text-stone-800 dark:hover:text-white text-lg p-1">
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveItemForm} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">ชื่อสินค้า *</label>
-                <input 
-                  type="text"
-                  placeholder="เช่น สบู่ก้อน, ยาสระผม..."
-                  value={formName}
-                  onChange={e => setFormName(e.target.value)}
-                  className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                  <span>รหัสบาร์โค้ด (Barcode / QR)</span>
-                  <button 
-                    type="button"
-                    onClick={() => { setShowAddModal(false); setShowScannerModal(true); }}
-                    className="text-emerald-700 dark:text-emerald-400 text-[11px] font-bold hover:underline flex items-center gap-1"
-                  >
-                    <i className="fa-solid fa-barcode"></i> สแกนด้วยกล้อง
-                  </button>
-                </label>
-                <input 
-                  type="text"
-                  placeholder="เช่น 885000000001 (สแกนหรือพิมพ์ได้)"
-                  value={formBarcode}
-                  onChange={e => setFormBarcode(e.target.value)}
-                  className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">หมวดหมู่</label>
-                  <select 
-                    value={formCategory}
-                    onChange={e => setFormCategory(e.target.value)}
-                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="ของใช้ส่วนตัว">ของใช้ส่วนตัว</option>
-                    <option value="ของใช้ในบ้าน">ของใช้ในบ้าน</option>
-                    <option value="อาหารแห้ง">อาหารแห้ง</option>
-                    <option value="เครื่องดื่ม">เครื่องดื่ม</option>
-                    <option value="ยาสามัญ">ยาสามัญ</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">หน่วยนับ</label>
-                  <input 
-                    type="text"
-                    placeholder="ชิ้น, ขวด, ก้อน"
-                    value={formUnit}
-                    onChange={e => setFormUnit(e.target.value)}
-                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">จำนวนเริ่มต้น</label>
-                  <input 
-                    type="number"
-                    min="0"
-                    value={formQuantity}
-                    onChange={e => setFormQuantity(e.target.value)}
-                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">จำนวนขั้นต่ำ (Min Threshold)</label>
-                  <input 
-                    type="number"
-                    min="1"
-                    value={formMinThreshold}
-                    onChange={e => setFormMinThreshold(e.target.value)}
-                    className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">ไอคอนแสดงผล</label>
-                <div className="flex gap-2 text-xl overflow-x-auto pb-1">
-                  {['🧼', '🧴', '🧻', '✨', '☕', '🥤', '🍞', '📦'].map(ic => (
-                    <button
-                      key={ic}
-                      type="button"
-                      onClick={() => setFormIcon(ic)}
-                      className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition ${formIcon === ic ? 'bg-emerald-600 border-emerald-600 text-white scale-105 shadow-xs' : 'bg-stone-50 dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-800 dark:text-slate-200'}`}
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-stone-100 dark:border-slate-800">
-                <button 
-                  type="button" 
-                  onClick={resetForm}
-                  className="px-4 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-400 text-xs font-semibold"
-                >
-                  ยกเลิก
-                </button>
-                <button 
-                  type="submit"
-                  className="bg-emerald-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-emerald-600/20"
-                >
-                  {editingItem ? 'บันทึกแก้ไข' : 'เพิ่มสินค้า'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ADD / EDIT STOCK ITEM MODAL */}
+      <AddEditStockModal 
+        isOpen={showAddModal}
+        editingItem={editingItem}
+        resetForm={resetForm}
+        handleSaveItemForm={handleSaveItemForm}
+        formName={formName}
+        setFormName={setFormName}
+        formBarcode={formBarcode}
+        setFormBarcode={setFormBarcode}
+        formCategory={formCategory}
+        setFormCategory={setFormCategory}
+        formUnit={formUnit}
+        setFormUnit={setFormUnit}
+        formQuantity={formQuantity}
+        setFormQuantity={setFormQuantity}
+        formMinThreshold={formMinThreshold}
+        setFormMinThreshold={setFormMinThreshold}
+        formIcon={formIcon}
+        setFormIcon={setFormIcon}
+        onOpenScanner={() => { setShowAddModal(false); setShowScannerModal(true); }}
+      />
     </div>
   );
 }
