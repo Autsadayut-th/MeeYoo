@@ -4,14 +4,13 @@ import { authService } from '../../services/authService';
 export function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [useRealOAuth, setUseRealOAuth] = useState(false);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setErrorMessage('');
 
     try {
-      const data = await authService.signInWithGoogle(useRealOAuth);
+      const data = await authService.signInWithGoogle();
       if (data && data.user) {
         const user = data.user;
         onLoginSuccess({
@@ -54,7 +53,7 @@ export function Login({ onLoginSuccess }) {
         )}
 
         {/* SINGLE GOOGLE LOGIN BUTTON */}
-        <div className="space-y-4 pt-2">
+        <div className="pt-2">
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -86,20 +85,6 @@ export function Login({ onLoginSuccess }) {
               </>
             )}
           </button>
-
-          {/* OPTIONAL DIRECT SUPABASE OAUTH CHECKBOX */}
-          <div className="flex items-center justify-center gap-2 text-[11px] text-stone-500 dark:text-slate-400">
-            <input 
-              type="checkbox"
-              id="realOAuth"
-              checked={useRealOAuth}
-              onChange={e => setUseRealOAuth(e.target.checked)}
-              className="rounded accent-emerald-600"
-            />
-            <label htmlFor="realOAuth" className="cursor-pointer">
-              เชื่อมต่อผ่าน Supabase Cloud OAuth Direct
-            </label>
-          </div>
         </div>
 
         {/* SECURITY FOOTER BADGE */}

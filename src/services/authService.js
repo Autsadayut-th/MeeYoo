@@ -1,8 +1,8 @@
 import { supabase } from './supabaseClient';
 
 export const authService = {
-  async signInWithGoogle(useRealOAuth = false) {
-    if (useRealOAuth && supabase) {
+  async signInWithGoogle() {
+    if (supabase) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -13,7 +13,6 @@ export const authService = {
       return data;
     }
 
-    // Default seamless Google sign in
     return { 
       user: { 
         id: 'u_google_' + Date.now(), 
