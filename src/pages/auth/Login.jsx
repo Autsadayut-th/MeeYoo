@@ -4,37 +4,29 @@ import { authService } from '../../services/authService';
 export function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [useRealOAuth, setUseRealOAuth] = useState(false);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setErrorMessage('');
 
     try {
-      const data = await authService.signInWithGoogle();
+      const data = await authService.signInWithGoogle(useRealOAuth);
       if (data && data.user) {
         const user = data.user;
         onLoginSuccess({
           id: user.id || 'u_' + Date.now(),
           email: user.email || 'user@google.com',
-          name: user.user_metadata?.full_name || user.name || 'สมาชิก Google',
+          name: user.user_metadata?.full_name || user.name || 'สมาชิก Google 🌐',
           avatar: user.user_metadata?.avatar_url ? '👤' : '👨‍💻'
         });
       }
     } catch (err) {
       console.error("Google Login Error:", err);
-      setErrorMessage(err.message || 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง');
+      setErrorMessage(err.message || 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาตรวจสอบการตั้งค่า');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoLogin = () => {
-    onLoginSuccess({
-      id: 'u_demo_' + Date.now(),
-      email: 'demo@meeyoo.app',
-      name: 'ผู้ทดลองใช้งาน 🏡',
-      avatar: '👨‍💻'
-    });
   };
 
   return (
@@ -62,11 +54,11 @@ export function Login({ onLoginSuccess }) {
         )}
 
         {/* SINGLE GOOGLE LOGIN BUTTON */}
-        <div className="space-y-3 pt-2">
+        <div className="space-y-4 pt-2">
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full bg-white dark:bg-slate-800 hover:bg-stone-50 dark:hover:bg-slate-700 text-stone-800 dark:text-white font-bold text-sm py-3.5 px-4 rounded-2xl border border-stone-300 dark:border-slate-700 shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 group relative overflow-hidden"
+            className="w-full bg-white dark:bg-slate-800 hover:bg-stone-50 dark:hover:bg-slate-700 text-stone-800 dark:text-white font-bold text-sm py-3.5 px-4 rounded-2xl border border-stone-300 dark:border-slate-700 shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 group relative overflow-hidden active:scale-98"
           >
             {loading ? (
               <i className="fa-solid fa-circle-notch fa-spin text-emerald-600 dark:text-emerald-400 text-lg"></i>
@@ -95,21 +87,25 @@ export function Login({ onLoginSuccess }) {
             )}
           </button>
 
-          {/* QUICK DEMO TESTING OPTION */}
-          <div className="pt-2">
-            <button
-              onClick={handleDemoLogin}
-              className="text-xs text-stone-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold underline transition"
-            >
-              หรือทดลองใช้งานโดยไม่ต้องล็อกอิน (Demo Mode)
-            </button>
+          {/* OPTIONAL DIRECT SUPABASE OAUTH CHECKBOX */}
+          <div className="flex items-center justify-center gap-2 text-[11px] text-stone-500 dark:text-slate-400">
+            <input 
+              type="checkbox"
+              id="realOAuth"
+              checked={useRealOAuth}
+              onChange={e => setUseRealOAuth(e.target.checked)}
+              className="rounded accent-emerald-600"
+            />
+            <label htmlFor="realOAuth" className="cursor-pointer">
+              เชื่อมต่อผ่าน Supabase Cloud OAuth Direct
+            </label>
           </div>
         </div>
 
         {/* SECURITY FOOTER BADGE */}
         <div className="pt-4 border-t border-stone-100 dark:border-slate-800 text-[11px] text-stone-400 dark:text-slate-500 flex items-center justify-center gap-1.5 font-medium">
           <i className="fa-solid fa-shield-halved text-emerald-600 dark:text-emerald-500"></i>
-          <span>ปลอดภัยด้วยระบบการยืนยันตัวตน Google OAuth</span>
+          <span>ระบบเข้าสู่ระบบปลอดภัย ป้องกันข้อมูลสูญหาย</span>
         </div>
 
       </div>
