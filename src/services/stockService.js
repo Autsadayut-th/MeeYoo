@@ -1,17 +1,19 @@
 import { supabase } from './supabaseClient';
 import { homeService } from './homeService';
+import { ensureUUID } from '../utils/constants';
 
 export const stockService = {
   async fetchItems(homeId) {
     if (supabase) {
+      const validHomeId = ensureUUID(homeId);
       try {
         const { data, error } = await supabase
           .from('items')
           .select('*')
-          .eq('home_id', homeId)
+          .eq('home_id', validHomeId)
           .order('created_at', { ascending: false });
         if (!error && data) return data;
-        if (error) console.error("Supabase fetchItems error:", error);
+        if (error) console.error("Supabase fetchItems error:", error.message);
       } catch (e) {
         console.warn("Supabase fetchItems fallback to local:", e);
       }
@@ -23,12 +25,15 @@ export const stockService = {
   async saveItem(item, homeId) {
     if (supabase) {
       try {
+        const validHomeId = ensureUUID(homeId);
+        const validItemId = ensureUUID(item.id);
+
         // Ensure home row exists in Supabase DB to prevent FK violation error
-        await homeService.ensureHomeExists(homeId);
+        await homeService.ensureHomeExists(validHomeId);
 
         const payload = {
-          id: item.id,
-          home_id: homeId,
+          id: validItemId,
+          home_id: validHomeId,
           name: item.name,
           category: item.category,
           quantity: Number(item.quantity),
@@ -53,9 +58,10 @@ export const stockService = {
 
   async deleteItem(itemId) {
     if (supabase) {
+      const validItemId = ensureUUID(itemId);
       try {
-        const { error } = await supabase.from('items').delete().eq('id', itemId);
-        if (error) console.error("Supabase deleteItem error:", error);
+        const { error } = await supabase.from('items').delete().eq('id', validItemId);
+        if (error) console.error("Supabase deleteItem error:", error.message);
       } catch (e) {
         console.warn("Supabase deleteItem fallback to local:", e);
       }
@@ -64,11 +70,12 @@ export const stockService = {
 
   subscribeToItems(homeId, onUpdate) {
     if (!supabase) return null;
+    const validHomeId = ensureUUID(homeId);
     try {
       const channel = supabase
-        .channel(`public:items:${homeId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter: `home_id=eq.${homeId}` }, () => {
-          this.fetchItems(homeId).then(items => onUpdate(items));
+        .channel(`public:items:${validHomeId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter: `home_id=eq.${validHomeId}` }, () => {
+          this.fetchItems(validHomeId).then(items => onUpdate(items));
         })
         .subscribe();
       return channel;

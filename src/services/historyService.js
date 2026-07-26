@@ -1,14 +1,16 @@
 import { supabase } from './supabaseClient';
 import { homeService } from './homeService';
+import { ensureUUID } from '../utils/constants';
 
 export const historyService = {
   async fetchHistory(homeId) {
     if (supabase) {
+      const validHomeId = ensureUUID(homeId);
       try {
         const { data, error } = await supabase
           .from('stock_transactions')
           .select('*')
-          .eq('home_id', homeId)
+          .eq('home_id', validHomeId)
           .order('created_at', { ascending: false });
         if (!error && data) return data;
       } catch (e) {
@@ -22,10 +24,14 @@ export const historyService = {
   async addTransaction(tx, homeId) {
     if (supabase) {
       try {
-        await homeService.ensureHomeExists(homeId);
+        const validHomeId = ensureUUID(homeId);
+        const validTxId = ensureUUID(tx.id);
+
+        await homeService.ensureHomeExists(validHomeId);
+
         const { error } = await supabase.from('stock_transactions').insert([{
-          id: tx.id,
-          home_id: homeId,
+          id: validTxId,
+          home_id: validHomeId,
           item_name: tx.item_name,
           user_name: tx.user_name,
           action_type: tx.action_type,
@@ -34,7 +40,7 @@ export const historyService = {
           change_amount: Number(tx.change_amount),
           note: tx.note || ''
         }]);
-        if (error) console.error("Supabase addTransaction error:", error);
+        if (error) console.error("Supabase addTransaction error:", error.message);
       } catch (e) {
         console.warn("Supabase addTransaction fallback to local:", e);
       }
@@ -43,11 +49,12 @@ export const historyService = {
 
   subscribeToHistory(homeId, onUpdate) {
     if (!supabase) return null;
+    const validHomeId = ensureUUID(homeId);
     try {
       const channel = supabase
-        .channel(`public:stock_transactions:${homeId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_transactions', filter: `home_id=eq.${homeId}` }, () => {
-          this.fetchHistory(homeId).then(list => onUpdate(list));
+        .channel(`public:stock_transactions:${validHomeId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_transactions', filter: `home_id=eq.${validHomeId}` }, () => {
+          this.fetchHistory(validHomeId).then(list => onUpdate(list));
         })
         .subscribe();
       return channel;

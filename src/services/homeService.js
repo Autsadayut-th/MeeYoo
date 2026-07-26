@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { DEFAULT_HOUSE } from '../utils/constants';
+import { DEFAULT_HOUSE, ensureUUID } from '../utils/constants';
 
 export const homeService = {
   async getActiveHome() {
@@ -7,13 +7,14 @@ export const homeService = {
     return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
   },
 
-  async ensureHomeExists(homeId = 'h_home_8829', name = 'บ้านของเรา 🏡', code = 'HOME-8829') {
+  async ensureHomeExists(homeId = '88290000-0000-0000-0000-000000000000', name = 'บ้านของเรา 🏡', code = 'HOME-8829') {
     if (!supabase) return;
+    const validHomeId = ensureUUID(homeId);
     try {
-      const { data } = await supabase.from('homes').select('id').eq('id', homeId).single();
+      const { data } = await supabase.from('homes').select('id').eq('id', validHomeId).single();
       if (!data) {
         await supabase.from('homes').upsert([{
-          id: homeId,
+          id: validHomeId,
           name: name,
           invite_code: code
         }]);
@@ -25,8 +26,10 @@ export const homeService = {
 
   async createHome(homeName, user) {
     const code = 'HOME-' + Math.floor(1000 + Math.random() * 9000);
+    const validId = crypto.randomUUID ? crypto.randomUUID() : '88290000-0000-0000-0000-' + Date.now().toString(16).padStart(12, '0');
+    
     const newHome = {
-      id: 'h_' + Date.now(),
+      id: validId,
       code: code,
       name: homeName.trim() + ' 🏡',
       inviteLink: `https://meeyoo.app/invite?code=${code}`,
@@ -42,12 +45,13 @@ export const homeService = {
         }]);
         if (error) console.error("Supabase createHome error:", error);
 
-        if (user) {
+        if (user && user.id) {
+          const validUserId = ensureUUID(user.id);
           await supabase.from('home_members').upsert([{
             home_id: newHome.id,
-            user_id: user.id,
-            user_email: user.email,
-            user_name: user.name,
+            user_id: validUserId,
+            user_email: user.email || 'user@meeyoo.app',
+            user_name: user.name || 'เจ้าของบ้าน',
             role: 'เจ้าของบ้าน'
           }]);
         }
@@ -72,12 +76,13 @@ export const homeService = {
           .single();
         if (data) joinedHome = data;
 
-        if (user) {
+        if (user && user.id) {
+          const validUserId = ensureUUID(user.id);
           await supabase.from('home_members').upsert([{
             home_id: joinedHome.id,
-            user_id: user.id,
-            user_email: user.email,
-            user_name: user.name,
+            user_id: validUserId,
+            user_email: user.email || 'user@meeyoo.app',
+            user_name: user.name || 'สมาชิก',
             role: 'สมาชิก'
           }]);
         }
@@ -91,11 +96,12 @@ export const homeService = {
 
   async fetchMembers(homeId) {
     if (supabase) {
+      const validHomeId = ensureUUID(homeId);
       try {
         const { data, error } = await supabase
           .from('home_members')
           .select('*')
-          .eq('home_id', homeId);
+          .eq('home_id', validHomeId);
         if (!error && data && data.length > 0) return data;
       } catch (err) {
         console.warn("Supabase fetchMembers fallback to local:", err);

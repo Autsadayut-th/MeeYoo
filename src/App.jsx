@@ -23,7 +23,7 @@ import { shoppingService } from './services/shoppingService';
 import { supabase } from './services/supabaseClient';
 
 const DEFAULT_HOUSE = {
-  id: 'h_home_8829',
+  id: '88290000-0000-0000-0000-000000000000',
   code: 'HOME-8829',
   name: 'บ้านของเรา 🏡',
   inviteLink: 'https://meeyoo.app/invite?code=HOME-8829',

@@ -19,14 +19,20 @@ export const UNITS = [
 ];
 
 export const DEFAULT_HOUSE = {
-  id: 'h_home_8829',
+  id: '88290000-0000-0000-0000-000000000000',
   code: 'HOME-8829',
   name: 'บ้านของเรา 🏡',
   inviteLink: 'https://meeyoo.app/invite?code=HOME-8829',
   created_at: new Date().toISOString()
 };
 
-export const DEFAULT_MEMBERS = [
-  { id: 'u1', name: 'User 1 (คุณสมชาย)', email: 'user1@meeyoo.app', role: 'เจ้าของบ้าน', avatar: '👨‍💻' },
-  { id: 'u2', name: 'User 2 (คุณสมหญิง)', email: 'user2@meeyoo.app', role: 'สมาชิก', avatar: '👩‍🎨' }
-];
+export function ensureUUID(idStr) {
+  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  if (idStr && uuidRegex.test(idStr)) {
+    return idStr;
+  }
+  if (!idStr || idStr === 'h_home_8829' || idStr.startsWith('h_')) {
+    return '88290000-0000-0000-0000-000000000000';
+  }
+  return crypto.randomUUID();
+}
