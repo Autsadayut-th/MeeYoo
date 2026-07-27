@@ -62,13 +62,14 @@ export const stockService = {
         const { error } = await supabase.from('items').upsert([payload], { onConflict: 'id' });
         if (error) {
           console.error("Supabase saveItem Error:", error.message, error.details);
+          return null;
         } else {
           console.log("Supabase saveItem Success:", item.name);
+          return await this.fetchItems(validHomeId);
         }
-
-        return await this.fetchItems(validHomeId);
       } catch (e) {
         console.warn("Supabase saveItem warning:", e);
+        return null;
       }
     }
     return null;
