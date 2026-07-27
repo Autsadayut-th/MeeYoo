@@ -5,6 +5,7 @@ export function AddEditStockModal({
   editingItem,
   resetForm,
   handleSaveItemForm,
+  onDeleteItem,
   formName,
   setFormName,
   formBarcode,
@@ -139,20 +140,32 @@ export function AddEditStockModal({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-stone-100 dark:border-slate-800">
-            <button 
-              type="button" 
-              onClick={resetForm}
-              className="px-4 py-2 rounded-lg border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-400 text-xs font-medium hover:bg-stone-50 dark:hover:bg-slate-800 transition"
-            >
-              ยกเลิก
-            </button>
-            <button 
-              type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-5 py-2 rounded-lg shadow-sm transition"
-            >
-              {editingItem ? 'บันทึก' : 'เพิ่มสินค้า'}
-            </button>
+          <div className="flex justify-between items-center pt-3 border-t border-stone-100 dark:border-slate-800">
+            {editingItem ? (
+              <button 
+                type="button" 
+                onClick={() => { resetForm(); onDeleteItem && onDeleteItem(editingItem); }}
+                className="px-3 py-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-semibold hover:bg-rose-100 transition flex items-center gap-1.5"
+              >
+                <i className="fa-solid fa-trash-can"></i> ลบสินค้า
+              </button>
+            ) : <div />}
+
+            <div className="flex gap-2">
+              <button 
+                type="button" 
+                onClick={resetForm}
+                className="px-4 py-2 rounded-lg border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-400 text-xs font-medium hover:bg-stone-50 dark:hover:bg-slate-800 transition"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-5 py-2 rounded-lg shadow-sm transition"
+              >
+                {editingItem ? 'บันทึก' : 'เพิ่มสินค้า'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

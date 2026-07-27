@@ -845,6 +845,7 @@ export default function App() {
         editingItem={editingItem}
         resetForm={resetForm}
         handleSaveItemForm={handleSaveItemForm}
+        onDeleteItem={handleDeleteItem}
         formName={formName}
         setFormName={setFormName}
         formBarcode={formBarcode}
