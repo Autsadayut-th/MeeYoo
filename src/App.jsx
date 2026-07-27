@@ -303,14 +303,15 @@ export default function App() {
   }, [house, currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('meeyoo_items_v3', JSON.stringify(items));
-    localStorage.setItem('meeyoo_transactions_v3', JSON.stringify(transactions));
-    localStorage.setItem('meeyoo_shopping_v3', JSON.stringify(shoppingList));
-    localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(house));
+    if (house && house.id) {
+      localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(house));
+    }
     if (currentUser) {
       localStorage.setItem('meeyoo_current_user', JSON.stringify(currentUser));
     }
-    localStorage.setItem('meeyoo_house_members_v3', JSON.stringify(members));
+    if (Array.isArray(members) && members.length > 0) {
+      localStorage.setItem('meeyoo_house_members_v3', JSON.stringify(members));
+    }
 
     if (window.BroadcastChannel) {
       try {
