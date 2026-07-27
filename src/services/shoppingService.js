@@ -5,7 +5,6 @@ import { ensureUUID } from '../utils/constants';
 export const shoppingService = {
   async fetchShoppingList(homeId) {
     const validHomeId = ensureUUID(homeId);
-    let cloudList = null;
 
     if (supabase) {
       try {
@@ -15,35 +14,34 @@ export const shoppingService = {
           .select('*')
           .eq('home_id', validHomeId);
 
-        if (!error && data) {
-          cloudList = data;
+        if (!error && Array.isArray(data)) {
+          if (data.length === 0) {
+            try {
+              const saved = localStorage.getItem('meeyoo_shopping_v3');
+              const localList = saved ? JSON.parse(saved) : [];
+              if (localList.length > 0) {
+                for (const item of localList) {
+                  await this.saveShoppingItem(item, validHomeId);
+                }
+                localStorage.removeItem('meeyoo_shopping_v3');
+                const { data: freshData } = await supabase
+                  .from('shopping_list')
+                  .select('*')
+                  .eq('home_id', validHomeId);
+                if (freshData) return freshData;
+              }
+            } catch (e) {}
+          }
+          return data;
         }
       } catch (e) {
         console.warn("Supabase fetchShoppingList warning:", e);
       }
     }
 
-    if (cloudList && cloudList.length > 0) {
-      try {
-        localStorage.setItem('meeyoo_shopping_v3', JSON.stringify(cloudList));
-      } catch (e) {}
-      return cloudList;
-    }
-
     try {
       const saved = localStorage.getItem('meeyoo_shopping_v3');
-      const localList = saved ? JSON.parse(saved) : [];
-      if (localList.length > 0 && supabase) {
-        for (const item of localList) {
-          await this.saveShoppingItem(item, validHomeId);
-        }
-        const { data } = await supabase
-          .from('shopping_list')
-          .select('*')
-          .eq('home_id', validHomeId);
-        if (data && data.length > 0) return data;
-      }
-      return localList;
+      return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
     }
@@ -69,7 +67,7 @@ export const shoppingService = {
         }]);
         if (error) console.error("Supabase saveShoppingItem error:", error.message);
       } catch (e) {
-        console.warn("Supabase saveShoppingItem fallback to local:", e);
+        console.warn("Supabase saveShoppingItem warning:", e);
       }
     }
   },
@@ -81,7 +79,7 @@ export const shoppingService = {
         const { error } = await supabase.from('shopping_list').delete().eq('id', validItemId);
         if (error) console.error("Supabase deleteShoppingItem error:", error.message);
       } catch (e) {
-        console.warn("Supabase deleteShoppingItem fallback to local:", e);
+        console.warn("Supabase deleteShoppingItem warning:", e);
       }
     }
   },

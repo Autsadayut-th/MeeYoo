@@ -5,7 +5,6 @@ import { ensureUUID } from '../utils/constants';
 export const stockService = {
   async fetchItems(homeId) {
     const validHomeId = ensureUUID(homeId);
-    let cloudItems = null;
 
     if (supabase) {
       try {
@@ -16,8 +15,27 @@ export const stockService = {
           .eq('home_id', validHomeId)
           .order('created_at', { ascending: false });
 
-        if (!error && data) {
-          cloudItems = data;
+        if (!error && Array.isArray(data)) {
+          // If Cloud returns items (or 0 items for a new house), check if we need one-time push of old local storage items
+          if (data.length === 0) {
+            try {
+              const saved = localStorage.getItem('meeyoo_items_v3');
+              const localItems = saved ? JSON.parse(saved) : [];
+              if (localItems.length > 0) {
+                for (const item of localItems) {
+                  await this.saveItem(item, validHomeId);
+                }
+                localStorage.removeItem('meeyoo_items_v3');
+                const { data: freshCloudData } = await supabase
+                  .from('items')
+                  .select('*')
+                  .eq('home_id', validHomeId)
+                  .order('created_at', { ascending: false });
+                if (freshCloudData) return freshCloudData;
+              }
+            } catch (e) {}
+          }
+          return data;
         } else if (error) {
           console.error("Supabase fetchItems error:", error.message);
         }
@@ -26,29 +44,10 @@ export const stockService = {
       }
     }
 
-    if (cloudItems && cloudItems.length > 0) {
-      try {
-        localStorage.setItem('meeyoo_items_v3', JSON.stringify(cloudItems));
-      } catch (e) {}
-      return cloudItems;
-    }
-
-    // Auto-sync migration: If Cloud has 0 items but LocalStorage has local items, push local items to Supabase Cloud!
+    // Pure fallback if offline
     try {
       const saved = localStorage.getItem('meeyoo_items_v3');
-      const localItems = saved ? JSON.parse(saved) : [];
-      if (localItems.length > 0 && supabase) {
-        for (const item of localItems) {
-          await this.saveItem(item, validHomeId);
-        }
-        const { data } = await supabase
-          .from('items')
-          .select('*')
-          .eq('home_id', validHomeId)
-          .order('created_at', { ascending: false });
-        if (data && data.length > 0) return data;
-      }
-      return localItems;
+      return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
     }
@@ -60,7 +59,6 @@ export const stockService = {
         const validHomeId = ensureUUID(homeId);
         const validItemId = ensureUUID(item.id);
 
-        // Ensure home row exists in Supabase DB to prevent FK violation error
         await homeService.ensureHomeExists(validHomeId);
 
         const qty = Number(item.quantity);
@@ -87,7 +85,7 @@ export const stockService = {
           console.log("Supabase saveItem Success:", item.name);
         }
       } catch (e) {
-        console.warn("Supabase saveItem fallback to local:", e);
+        console.warn("Supabase saveItem warning:", e);
       }
     }
   },
@@ -99,7 +97,7 @@ export const stockService = {
         const { error } = await supabase.from('items').delete().eq('id', validItemId);
         if (error) console.error("Supabase deleteItem error:", error.message);
       } catch (e) {
-        console.warn("Supabase deleteItem fallback to local:", e);
+        console.warn("Supabase deleteItem warning:", e);
       }
     }
   },
