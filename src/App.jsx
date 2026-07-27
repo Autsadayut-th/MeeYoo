@@ -167,7 +167,14 @@ export default function App() {
             const parsedHouse = savedHouse ? JSON.parse(savedHouse) : null;
             if (parsedHouse && parsedHouse.id) {
               setHouse(parsedHouse);
-              setAuthView('app');
+              // เช็คสถานะสมาชิกก่อนว่าได้รับอนุมัติหรือยัง
+              homeService.checkMemberStatus(parsedHouse.id, userObj.id).then(status => {
+                if (status === 'pending') {
+                  setAuthView('waiting_approval');
+                } else {
+                  setAuthView('app');
+                }
+              }).catch(() => setAuthView('app'));
             } else {
               setAuthView('join_home');
             }
@@ -658,7 +665,12 @@ export default function App() {
         return exists ? prev : [...prev, memberUser];
       });
     }
-    setAuthView('app');
+    // ถ้าสถานะเป็น pending ให้รอการอนุมัติก่อน
+    if (joinedHouse.membershipStatus === 'pending') {
+      setAuthView('waiting_approval');
+    } else {
+      setAuthView('app');
+    }
   };
 
   const filteredItems = useMemo(() => {
