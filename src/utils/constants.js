@@ -18,8 +18,6 @@ export const UNITS = [
   'ถุง'
 ];
 
-
-
 export function ensureUUID(idStr) {
   const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
   if (idStr && uuidRegex.test(idStr)) {
@@ -41,3 +39,42 @@ export function ensureUUID(idStr) {
   return '88290000-0000-0000-0000-000000000000';
 }
 
+export function compressImage(file, callback, maxWidth = 500, maxHeight = 500, quality = 0.8) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = (event) => {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        callback(dataUrl);
+      } else {
+        callback(event.target.result);
+      }
+    };
+    img.onerror = () => callback(event.target.result);
+  };
+}

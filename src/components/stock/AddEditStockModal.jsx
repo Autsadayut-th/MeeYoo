@@ -1,4 +1,5 @@
 import React from 'react';
+import { compressImage } from '../../utils/constants';
 
 export function AddEditStockModal({
   isOpen,
@@ -29,15 +30,9 @@ export function AddEditStockModal({
   const handleImageFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('กรุณาเลือกไฟล์รูปภาพขนาดไม่เกิน 2MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormImageUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+      compressImage(file, (base64Str) => {
+        setFormImageUrl(base64Str);
+      }, 600, 600, 0.8);
     }
   };
 

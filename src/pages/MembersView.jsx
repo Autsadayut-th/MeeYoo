@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { compressImage } from '../utils/constants';
 
 export function MembersView({ 
   house, 
@@ -29,15 +30,9 @@ export function MembersView({
   const handleAvatarFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('กรุณาเลือกไฟล์รูปภาพขนาดไม่เกิน 2MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileAvatar(reader.result);
-      };
-      reader.readAsDataURL(file);
+      compressImage(file, (base64Str) => {
+        setProfileAvatar(base64Str);
+      }, 300, 300, 0.8);
     }
   };
 
