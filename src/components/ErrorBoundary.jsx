@@ -15,7 +15,13 @@ export class ErrorBoundary extends React.Component {
   }
 
   handleReset = () => {
-    localStorage.removeItem('meeyoo_active_house_v3');
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('meeyoo_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {}
     window.location.reload();
   };
 
