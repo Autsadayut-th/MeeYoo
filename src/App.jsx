@@ -166,12 +166,15 @@ export default function App() {
   // Initial Fetch & Supabase Realtime Websocket Subscriptions for Multi-device Sync!
   useEffect(() => {
     if (house && house.id) {
+      if (currentUser) {
+        homeService.addMember(house.id, currentUser);
+      }
+
       // Smart Fetch with Cloud Sync Shield
       stockService.fetchItems(house.id).then(cloudItems => {
         if (cloudItems && cloudItems.length > 0) {
           setItems(cloudItems);
         } else {
-          // If cloud has 0 items, check if local storage has items and upload to cloud
           const saved = localStorage.getItem('meeyoo_items_v3');
           if (saved) {
             const localItems = JSON.parse(saved);
@@ -223,21 +226,26 @@ export default function App() {
       });
 
       const subItems = stockService.subscribeToItems(house.id, (newItems) => {
-        if (newItems && newItems.length > 0) setItems(newItems);
+        if (Array.isArray(newItems)) setItems(newItems);
       });
 
       const subTx = historyService.subscribeToHistory(house.id, (newTx) => {
-        if (newTx && newTx.length > 0) setTransactions(newTx);
+        if (Array.isArray(newTx)) setTransactions(newTx);
       });
 
       const subShop = shoppingService.subscribeToShopping(house.id, (newShop) => {
-        if (newShop && newShop.length > 0) setShoppingList(newShop);
+        if (Array.isArray(newShop)) setShoppingList(newShop);
+      });
+
+      const subMembers = homeService.subscribeToMembers(house.id, (newMembers) => {
+        if (Array.isArray(newMembers) && newMembers.length > 0) setMembers(newMembers);
       });
 
       return () => {
         if (subItems) subItems.unsubscribe();
         if (subTx) subTx.unsubscribe();
         if (subShop) subShop.unsubscribe();
+        if (subMembers) subMembers.unsubscribe();
       };
     }
   }, [house, currentUser]);
@@ -401,7 +409,7 @@ export default function App() {
       recordTransaction(formName.trim(), 'UPDATE', editingItem.quantity, newQty, newQty - editingItem.quantity, 'แก้ไขรายละเอียดสินค้า');
     } else {
       const newItem = {
-        id: 'item_' + Date.now(),
+        id: crypto.randomUUID ? crypto.randomUUID() : ('88290000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0')),
         name: formName.trim(),
         category: formCategory,
         quantity: Number(formQuantity),

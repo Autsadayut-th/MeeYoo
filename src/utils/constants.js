@@ -31,8 +31,18 @@ export function ensureUUID(idStr) {
   if (idStr && uuidRegex.test(idStr)) {
     return idStr;
   }
-  if (!idStr || idStr === 'h_home_8829' || idStr.startsWith('h_')) {
+  if (!idStr || idStr === 'h_home_8829' || idStr === 'HOME-8829' || idStr.startsWith('h_home_8829')) {
     return '88290000-0000-0000-0000-000000000000';
   }
-  return crypto.randomUUID();
+  if (typeof idStr === 'string' && idStr.trim()) {
+    let hash = 0;
+    for (let i = 0; i < idStr.length; i++) {
+      hash = (hash << 5) - hash + idStr.charCodeAt(i);
+      hash |= 0;
+    }
+    const hex = Math.abs(hash).toString(16).padStart(12, '0');
+    return `88290000-0000-4000-8000-${hex.slice(-12)}`;
+  }
+  return '88290000-0000-0000-0000-000000000000';
 }
+

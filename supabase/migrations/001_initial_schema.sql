@@ -1,6 +1,6 @@
 -- 1. PROFILES TABLE (เก็บโปรไฟล์ผู้ใช้)
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     full_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -18,11 +18,16 @@ CREATE TABLE IF NOT EXISTS public.homes (
 CREATE TABLE IF NOT EXISTS public.home_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     home_id UUID REFERENCES public.homes(id) ON DELETE CASCADE NOT NULL,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-    role TEXT DEFAULT 'member',
+    user_id UUID NOT NULL,
+    user_email TEXT DEFAULT '',
+    user_name TEXT DEFAULT 'สมาชิก',
+    role TEXT DEFAULT 'สมาชิก',
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     UNIQUE(home_id, user_id)
 );
+
+ALTER TABLE public.home_members ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
+ALTER TABLE public.home_members ADD COLUMN IF NOT EXISTS user_name TEXT DEFAULT 'สมาชิก';
 
 -- 4. ITEMS TABLE (เก็บสต็อกสินค้า)
 CREATE TABLE IF NOT EXISTS public.items (
@@ -111,4 +116,12 @@ BEGIN
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE shopping_list;
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'home_members'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE home_members;
+  END IF;
 END $$;
+
