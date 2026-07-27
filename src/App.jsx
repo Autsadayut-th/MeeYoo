@@ -728,7 +728,30 @@ export default function App() {
   }
 
   if (authView === 'login' || !currentUser) {
-    return <Login onLoginSuccess={(u) => { setCurrentUser(u); setAuthView('app'); }} onSwitchToRegister={() => setAuthView('register')} />;
+    return (
+      <Login 
+        onLoginSuccess={(u) => { 
+          setCurrentUser(u); 
+          try {
+            const savedHouse = localStorage.getItem('meeyoo_active_house_v3');
+            const parsedHouse = savedHouse ? JSON.parse(savedHouse) : null;
+            if (parsedHouse && parsedHouse.id) {
+              setHouse(parsedHouse);
+              setAuthView('app'); 
+            } else {
+              setAuthView('join_home');
+            }
+          } catch (e) {
+            setAuthView('join_home');
+          }
+        }} 
+        onSwitchToRegister={() => setAuthView('register')} 
+      />
+    );
+  }
+
+  if (!house || !house.id || authView === 'join_home') {
+    return <JoinHome currentUser={currentUser} onJoinedSuccess={handleHomeJoined} onCreateHomeClick={() => setAuthView('create_home')} />;
   }
 
   return (

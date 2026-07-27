@@ -16,10 +16,12 @@ export function Header({ house, isDarkMode, toggleDarkMode, onOpenScanner, curre
           <div>
             <span className="font-heading font-bold text-stone-900 dark:text-white text-sm">MeeYoo</span>
             <div className="text-[11px] text-stone-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-              <span>{house.name}</span>
-              <span className="text-[10px] bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 px-1.5 py-px rounded font-mono">
-                {house.code}
-              </span>
+              <span>{house?.name || 'บ้านของเรา'}</span>
+              {house?.code && (
+                <span className="text-[10px] bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 px-1.5 py-px rounded font-mono">
+                  {house.code}
+                </span>
+              )}
             </div>
           </div>
         </div>

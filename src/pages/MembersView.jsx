@@ -63,9 +63,9 @@ export function MembersView({
         <h3 className="font-heading font-semibold text-sm text-stone-900 dark:text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <i className="fa-solid fa-house-user text-emerald-600 text-xs"></i>
-            <span>ข้อมูลบ้าน ({house.name})</span>
+            <span>ข้อมูลบ้าน ({house?.name || 'บ้านของเรา'})</span>
             <button 
-              onClick={() => { setNewHomeName(house.name); setShowEditHomeModal(true); }}
+              onClick={() => { setNewHomeName(house?.name || ''); setShowEditHomeModal(true); }}
               className="text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 p-1 text-xs"
               title="แก้ไขชื่อบ้าน"
             >
@@ -83,7 +83,7 @@ export function MembersView({
         <div className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 p-3 rounded-lg flex items-center justify-between">
           <div>
             <div className="text-[11px] text-stone-500 dark:text-slate-400">รหัสเชิญ</div>
-            <div className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400">{house.code}</div>
+            <div className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400">{house?.code || ''}</div>
           </div>
 
           <button 
