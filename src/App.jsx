@@ -91,11 +91,10 @@ export default function App() {
   const [formUnit, setFormUnit] = useState('ชิ้น');
   const [formMinThreshold, setFormMinThreshold] = useState(1);
   const [formIcon, setFormIcon] = useState('📦');
-  const [formBarcode, setFormBarcode] = useState('');
-
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
   const [toastNotification, setToastNotification] = useState(null);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const prevMembersRef = useRef([]);
 
   useEffect(() => {
@@ -174,6 +173,11 @@ export default function App() {
   useEffect(() => {
     if (house && house.id) {
       if (currentUser) {
+        homeService.checkMemberStatus(house.id, currentUser.id).then(status => {
+          if (status === 'pending') {
+            setAuthView('waiting_approval');
+          }
+        });
         homeService.addMember(house.id, currentUser);
       }
 
@@ -247,6 +251,8 @@ export default function App() {
         }
       });
 
+      homeService.fetchPendingMembers(house.id).then(reqs => setPendingRequests(reqs));
+
       const subItems = stockService.subscribeToItems(house.id, (newItems) => {
         if (Array.isArray(newItems)) setItems(newItems);
       });
@@ -276,6 +282,20 @@ export default function App() {
           }
           prevMembersRef.current = newMembers;
           setMembers(newMembers);
+        }
+
+        homeService.fetchPendingMembers(house.id).then(reqs => setPendingRequests(reqs));
+
+        if (currentUser && house && house.id) {
+          homeService.checkMemberStatus(house.id, currentUser.id).then(status => {
+            if (status === 'approved' && authView === 'waiting_approval') {
+              triggerHaptic([100, 50, 100]);
+              setAuthView('app');
+            } else if (status === 'rejected' && authView === 'waiting_approval') {
+              alert('คำขอเข้าร่วมบ้านของคุณไม่ได้รับการอนุมัติ');
+              setAuthView('join_home');
+            }
+          });
         }
       });
 
@@ -738,6 +758,9 @@ export default function App() {
             setAuthView={setAuthView}
             currentUser={currentUser}
             members={members}
+            pendingRequests={pendingRequests}
+            onApproveMember={handleApproveMember}
+            onRejectMember={handleRejectMember}
             handleSignOut={handleSignOut}
             onOpenInviteModal={() => setShowInviteModal(true)}
             triggerHaptic={triggerHaptic}

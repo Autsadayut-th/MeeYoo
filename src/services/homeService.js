@@ -24,7 +24,7 @@ export const homeService = {
     }
   },
 
-  async addMember(homeId, user, role = 'สมาชิก') {
+  async addMember(homeId, user, role = 'สมาชิก', status = 'approved') {
     if (!supabase || !user) return;
     const validHomeId = ensureUUID(homeId);
     const validUserId = ensureUUID(user.id);
@@ -35,7 +35,8 @@ export const homeService = {
       user_id: validUserId,
       user_email: user.email || 'user@meeyoo.app',
       user_name: user.name || (role === 'เจ้าของบ้าน' ? 'เจ้าของบ้าน' : 'สมาชิก'),
-      role: role
+      role: role,
+      status: status
     };
 
     try {
@@ -70,7 +71,7 @@ export const homeService = {
         if (error) console.error("Supabase createHome error:", error);
 
         if (user) {
-          await this.addMember(newHome.id, user, 'เจ้าของบ้าน');
+          await this.addMember(newHome.id, user, 'เจ้าของบ้าน', 'approved');
         }
       } catch (err) {
         console.warn("Supabase createHome fallback to local:", err);
@@ -94,14 +95,62 @@ export const homeService = {
         if (data) joinedHome = data;
 
         if (user) {
-          await this.addMember(joinedHome.id, user, 'สมาชิก');
+          await this.addMember(joinedHome.id, user, 'สมาชิก', 'pending');
         }
       } catch (err) {
         console.warn("Supabase joinHome fallback to local:", err);
       }
     }
 
-    return joinedHome;
+    return { ...joinedHome, membershipStatus: 'pending' };
+  },
+
+  async approveMember(homeId, userId) {
+    if (!supabase) return;
+    const validHomeId = ensureUUID(homeId);
+    const validUserId = ensureUUID(userId);
+    try {
+      const { error } = await supabase
+        .from('home_members')
+        .update({ status: 'approved' })
+        .eq('home_id', validHomeId)
+        .eq('user_id', validUserId);
+      if (error) console.error("Supabase approveMember error:", error);
+    } catch (e) {
+      console.warn("Supabase approveMember warning:", e);
+    }
+  },
+
+  async rejectMember(homeId, userId) {
+    if (!supabase) return;
+    const validHomeId = ensureUUID(homeId);
+    const validUserId = ensureUUID(userId);
+    try {
+      const { error } = await supabase
+        .from('home_members')
+        .delete()
+        .eq('home_id', validHomeId)
+        .eq('user_id', validUserId);
+      if (error) console.error("Supabase rejectMember error:", error);
+    } catch (e) {
+      console.warn("Supabase rejectMember warning:", e);
+    }
+  },
+
+  async checkMemberStatus(homeId, userId) {
+    if (!supabase || !userId) return 'approved';
+    const validHomeId = ensureUUID(homeId);
+    const validUserId = ensureUUID(userId);
+    try {
+      const { data } = await supabase
+        .from('home_members')
+        .select('status')
+        .eq('home_id', validHomeId)
+        .eq('user_id', validUserId)
+        .single();
+      if (data && data.status) return data.status;
+    } catch (e) {}
+    return 'approved';
   },
 
   async fetchMembers(homeId) {
@@ -113,11 +162,13 @@ export const homeService = {
           .select('*')
           .eq('home_id', validHomeId);
         if (!error && data && data.length > 0) {
-          return data.map(m => ({
+          const approved = data.filter(m => !m.status || m.status === 'approved');
+          return approved.map(m => ({
             id: m.user_id || m.id,
             email: m.user_email || m.email || 'user@meeyoo.app',
             name: m.user_name || m.name || 'สมาชิก',
-            role: m.role || 'สมาชิก'
+            role: m.role || 'สมาชิก',
+            status: m.status || 'approved'
           }));
         }
       } catch (err) {
@@ -127,6 +178,28 @@ export const homeService = {
 
     const saved = localStorage.getItem('meeyoo_house_members_v3');
     return saved ? JSON.parse(saved) : [];
+  },
+
+  async fetchPendingMembers(homeId) {
+    if (!supabase) return [];
+    const validHomeId = ensureUUID(homeId);
+    try {
+      const { data, error } = await supabase
+        .from('home_members')
+        .select('*')
+        .eq('home_id', validHomeId)
+        .eq('status', 'pending');
+      if (!error && data) {
+        return data.map(m => ({
+          id: m.user_id || m.id,
+          email: m.user_email || m.email || 'user@meeyoo.app',
+          name: m.user_name || m.name || 'สมาชิก',
+          role: m.role || 'สมาชิก',
+          status: 'pending'
+        }));
+      }
+    } catch (err) {}
+    return [];
   },
 
   subscribeToMembers(homeId, onUpdate) {
@@ -145,4 +218,5 @@ export const homeService = {
     }
   }
 };
+
 

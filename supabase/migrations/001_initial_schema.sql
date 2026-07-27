@@ -22,12 +22,15 @@ CREATE TABLE IF NOT EXISTS public.home_members (
     user_email TEXT DEFAULT '',
     user_name TEXT DEFAULT 'สมาชิก',
     role TEXT DEFAULT 'สมาชิก',
+    status TEXT DEFAULT 'approved',
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     UNIQUE(home_id, user_id)
 );
 
 ALTER TABLE public.home_members ADD COLUMN IF NOT EXISTS user_email TEXT DEFAULT '';
 ALTER TABLE public.home_members ADD COLUMN IF NOT EXISTS user_name TEXT DEFAULT 'สมาชิก';
+ALTER TABLE public.home_members ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'approved';
+
 
 -- 4. ITEMS TABLE (เก็บสต็อกสินค้า)
 CREATE TABLE IF NOT EXISTS public.items (
