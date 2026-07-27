@@ -88,26 +88,10 @@ export default function App() {
     }
   });
 
-  // Real Production State
-  const [items, setItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem('meeyoo_items_v3');
-      const parsed = saved ? JSON.parse(saved) : null;
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_transactions_v3');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [shoppingList, setShoppingList] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_shopping_v3');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Real Production State - 100% Supabase Cloud Driven
+  const [items, setItems] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [shoppingList, setShoppingList] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -215,49 +199,22 @@ export default function App() {
         homeService.addMember(house.id, currentUser);
       }
 
-      // Smart Fetch with Cloud Sync Shield
+      // 100% Supabase Cloud Sync
       stockService.fetchItems(house.id).then(cloudItems => {
-        if (cloudItems && cloudItems.length > 0) {
+        if (Array.isArray(cloudItems)) {
           setItems(cloudItems);
-        } else {
-          const saved = localStorage.getItem('meeyoo_items_v3');
-          if (saved) {
-            const localItems = JSON.parse(saved);
-            if (localItems && localItems.length > 0) {
-              setItems(localItems);
-              localItems.forEach(item => stockService.saveItem(item, house.id));
-            }
-          }
         }
       });
 
       historyService.fetchHistory(house.id).then(cloudHistory => {
-        if (cloudHistory && cloudHistory.length > 0) {
+        if (Array.isArray(cloudHistory)) {
           setTransactions(cloudHistory);
-        } else {
-          const saved = localStorage.getItem('meeyoo_transactions_v3');
-          if (saved) {
-            const localTx = JSON.parse(saved);
-            if (localTx && localTx.length > 0) {
-              setTransactions(localTx);
-              localTx.forEach(tx => historyService.addTransaction(tx, house.id));
-            }
-          }
         }
       });
 
       shoppingService.fetchShoppingList(house.id).then(cloudShopping => {
-        if (cloudShopping && cloudShopping.length > 0) {
+        if (Array.isArray(cloudShopping)) {
           setShoppingList(cloudShopping);
-        } else {
-          const saved = localStorage.getItem('meeyoo_shopping_v3');
-          if (saved) {
-            const localList = JSON.parse(saved);
-            if (localList && localList.length > 0) {
-              setShoppingList(localList);
-              localList.forEach(item => shoppingService.saveShoppingItem(item, house.id));
-            }
-          }
         }
       });
 
