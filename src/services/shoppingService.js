@@ -64,7 +64,7 @@ export const shoppingService = {
           quantity_needed: isNaN(qtyNeeded) ? 1 : Math.max(1, qtyNeeded),
           is_purchased: Boolean(item.is_purchased),
           auto_added: Boolean(item.auto_added)
-        }]);
+        }], { onConflict: 'id' });
         if (error) console.error("Supabase saveShoppingItem error:", error.message);
       } catch (e) {
         console.warn("Supabase saveShoppingItem warning:", e);
