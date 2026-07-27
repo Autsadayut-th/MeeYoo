@@ -48,8 +48,12 @@ export function Header({ house, isDarkMode, toggleDarkMode, onOpenScanner, curre
             className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs cursor-pointer hover:border-emerald-500 transition"
             title="สมาชิก"
           >
-            <div className="avatar-initials avatar-initials-sm text-[10px]">
-              {getInitials(currentUser?.name)}
+            <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
+              {currentUser?.avatar_url ? (
+                <img src={currentUser.avatar_url} alt={currentUser.name} className="w-full h-full object-cover" />
+              ) : (
+                getInitials(currentUser?.name)
+              )}
             </div>
             <span className="font-medium text-stone-700 dark:text-slate-200 hidden sm:inline text-[11px] truncate max-w-[80px]">
               {currentUser?.name ? currentUser.name.split(' ')[0] : 'สมาชิก'}

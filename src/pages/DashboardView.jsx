@@ -10,8 +10,12 @@ export function DashboardView({ currentUser, house, stats, items, setActiveTab, 
     <div className="space-y-4">
       <div className="glass-card p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="avatar-initials avatar-initials-lg">
-            {getInitials(currentUser?.name)}
+          <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold overflow-hidden shrink-0 text-sm shadow-md">
+            {currentUser?.avatar_url ? (
+              <img src={currentUser.avatar_url} alt={currentUser.name} className="w-full h-full object-cover" />
+            ) : (
+              getInitials(currentUser?.name)
+            )}
           </div>
           <div>
             <div className="text-[11px] text-stone-500 dark:text-slate-400">เข้าสู่ระบบในชื่อ</div>
