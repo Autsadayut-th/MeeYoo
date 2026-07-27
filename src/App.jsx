@@ -155,7 +155,7 @@ export default function App() {
   // Listen for Supabase Google OAuth Redirect Sign-In Session Return
   useEffect(() => {
     if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      const handleUserSession = (session) => {
         if (session && session.user) {
           const u = session.user;
           const userObj = {
@@ -164,22 +164,25 @@ export default function App() {
             name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Google User'),
           };
           setCurrentUser(userObj);
-          setAuthView('app');
-        }
-      });
+          localStorage.setItem('meeyoo_current_user', JSON.stringify(userObj));
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session && session.user) {
-          const u = session.user;
-          const userObj = {
-            id: u.id,
-            email: u.email || 'google.user@gmail.com',
-            name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Google User'),
-          };
-          setCurrentUser(userObj);
-          setAuthView('app');
+          try {
+            const savedHouse = localStorage.getItem('meeyoo_active_house_v3');
+            const parsedHouse = savedHouse ? JSON.parse(savedHouse) : null;
+            if (parsedHouse && parsedHouse.id) {
+              setHouse(parsedHouse);
+              setAuthView('app');
+            } else {
+              setAuthView('join_home');
+            }
+          } catch (e) {
+            setAuthView('join_home');
+          }
         }
-      });
+      };
+
+      supabase.auth.getSession().then(({ data: { session } }) => handleUserSession(session));
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => handleUserSession(session));
 
       return () => subscription.unsubscribe();
     }
@@ -633,9 +636,11 @@ export default function App() {
 
   const handleHomeCreated = (newHouse) => {
     setHouse(newHouse);
+    localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(newHouse));
     if (currentUser) {
       const ownerUser = { ...currentUser, role: 'เจ้าของบ้าน' };
       setCurrentUser(ownerUser);
+      localStorage.setItem('meeyoo_current_user', JSON.stringify(ownerUser));
       setMembers([ownerUser]);
     }
     setItems([]);
@@ -646,9 +651,11 @@ export default function App() {
 
   const handleHomeJoined = (joinedHouse) => {
     setHouse(joinedHouse);
+    localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(joinedHouse));
     if (currentUser) {
       const memberUser = { ...currentUser, role: 'สมาชิก' };
       setCurrentUser(memberUser);
+      localStorage.setItem('meeyoo_current_user', JSON.stringify(memberUser));
       setMembers(prev => {
         const exists = prev.some(m => m.email === memberUser.email);
         return exists ? prev : [...prev, memberUser];
