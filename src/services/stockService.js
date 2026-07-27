@@ -4,23 +4,51 @@ import { ensureUUID } from '../utils/constants';
 
 export const stockService = {
   async fetchItems(homeId) {
+    const validHomeId = ensureUUID(homeId);
+    let cloudItems = null;
+
     if (supabase) {
-      const validHomeId = ensureUUID(homeId);
       try {
+        await homeService.ensureHomeExists(validHomeId);
         const { data, error } = await supabase
           .from('items')
           .select('*')
           .eq('home_id', validHomeId)
           .order('created_at', { ascending: false });
-        if (!error && data) return data;
-        if (error) console.error("Supabase fetchItems error:", error.message);
+
+        if (!error && data) {
+          cloudItems = data;
+        } else if (error) {
+          console.error("Supabase fetchItems error:", error.message);
+        }
       } catch (e) {
-        console.warn("Supabase fetchItems fallback to local:", e);
+        console.warn("Supabase fetchItems warning:", e);
       }
     }
+
+    if (cloudItems && cloudItems.length > 0) {
+      try {
+        localStorage.setItem('meeyoo_items_v3', JSON.stringify(cloudItems));
+      } catch (e) {}
+      return cloudItems;
+    }
+
+    // Auto-sync migration: If Cloud has 0 items but LocalStorage has local items, push local items to Supabase Cloud!
     try {
       const saved = localStorage.getItem('meeyoo_items_v3');
-      return saved ? JSON.parse(saved) : [];
+      const localItems = saved ? JSON.parse(saved) : [];
+      if (localItems.length > 0 && supabase) {
+        for (const item of localItems) {
+          await this.saveItem(item, validHomeId);
+        }
+        const { data } = await supabase
+          .from('items')
+          .select('*')
+          .eq('home_id', validHomeId)
+          .order('created_at', { ascending: false });
+        if (data && data.length > 0) return data;
+      }
+      return localItems;
     } catch (e) {
       return [];
     }

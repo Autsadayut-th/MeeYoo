@@ -4,21 +4,46 @@ import { ensureUUID } from '../utils/constants';
 
 export const shoppingService = {
   async fetchShoppingList(homeId) {
+    const validHomeId = ensureUUID(homeId);
+    let cloudList = null;
+
     if (supabase) {
-      const validHomeId = ensureUUID(homeId);
       try {
+        await homeService.ensureHomeExists(validHomeId);
         const { data, error } = await supabase
           .from('shopping_list')
           .select('*')
           .eq('home_id', validHomeId);
-        if (!error && data) return data;
+
+        if (!error && data) {
+          cloudList = data;
+        }
       } catch (e) {
-        console.warn("Supabase fetchShoppingList fallback to local:", e);
+        console.warn("Supabase fetchShoppingList warning:", e);
       }
     }
+
+    if (cloudList && cloudList.length > 0) {
+      try {
+        localStorage.setItem('meeyoo_shopping_v3', JSON.stringify(cloudList));
+      } catch (e) {}
+      return cloudList;
+    }
+
     try {
       const saved = localStorage.getItem('meeyoo_shopping_v3');
-      return saved ? JSON.parse(saved) : [];
+      const localList = saved ? JSON.parse(saved) : [];
+      if (localList.length > 0 && supabase) {
+        for (const item of localList) {
+          await this.saveShoppingItem(item, validHomeId);
+        }
+        const { data } = await supabase
+          .from('shopping_list')
+          .select('*')
+          .eq('home_id', validHomeId);
+        if (data && data.length > 0) return data;
+      }
+      return localList;
     } catch (e) {
       return [];
     }
