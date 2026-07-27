@@ -98,6 +98,18 @@ export function StockView({
                         <span className={`text-[10px] px-1.5 py-px rounded font-semibold ${isOut ? 'badge-out' : isLow ? 'badge-low' : 'badge-normal'}`}>
                           {isOut ? 'หมดแล้ว' : isLow ? 'ใกล้หมด' : 'ปกติ'}
                         </span>
+                        {item.expiry_date && (() => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const exp = new Date(item.expiry_date);
+                          const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+                          if (diffDays < 0) {
+                            return <span className="text-[10px] px-1.5 py-px rounded font-semibold badge-expired">🔴 หมดอายุแล้ว</span>;
+                          } else if (diffDays <= 7) {
+                            return <span className="text-[10px] px-1.5 py-px rounded font-semibold badge-expiry-warning">⚠️ หมดอายุใน {diffDays} วัน</span>;
+                          }
+                          return null;
+                        })()}
                         {item.barcode && (
                           <span className="text-[9px] font-mono bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-slate-400 px-1.5 py-px rounded border border-stone-200 dark:border-slate-700">
                             <i className="fa-solid fa-barcode text-[8px] mr-1"></i>{item.barcode}

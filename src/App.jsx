@@ -105,8 +105,10 @@ export default function App() {
   const [formIcon, setFormIcon] = useState('📦');
   const [formBarcode, setFormBarcode] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('');
+  const [formExpiryDate, setFormExpiryDate] = useState('');
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
+  const [shopItemPrice, setShopItemPrice] = useState('');
   const [toastNotification, setToastNotification] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
   const prevMembersRef = useRef([]);
@@ -477,6 +479,7 @@ export default function App() {
         icon: formIcon,
         image_url: formImageUrl.trim(),
         barcode: formBarcode.trim(),
+        expiry_date: formExpiryDate,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -501,6 +504,7 @@ export default function App() {
     setFormIcon(item.icon || '📦');
     setFormImageUrl(item.image_url || '');
     setFormBarcode(item.barcode || '');
+    setFormExpiryDate(item.expiry_date || '');
     setShowAddModal(true);
   };
 
@@ -513,6 +517,7 @@ export default function App() {
     setFormIcon('📦');
     setFormImageUrl('');
     setFormBarcode('');
+    setFormExpiryDate('');
     setEditingItem(null);
     setShowAddModal(false);
   };
@@ -526,6 +531,7 @@ export default function App() {
       id: 'manual_' + Date.now(),
       item_name: shopItemName.trim(),
       quantity_needed: Number(shopItemQty),
+      estimated_price: Number(shopItemPrice) || 0,
       is_purchased: false,
       auto_added: false
     };
@@ -534,6 +540,7 @@ export default function App() {
     shoppingService.saveShoppingItem(newShopItem, house.id);
     setShopItemName('');
     setShopItemQty(1);
+    setShopItemPrice('');
   };
 
   const toggleShoppingPurchased = (id) => {
@@ -816,6 +823,8 @@ export default function App() {
             setShopItemName={setShopItemName}
             shopItemQty={shopItemQty}
             setShopItemQty={setShopItemQty}
+            shopItemPrice={shopItemPrice}
+            setShopItemPrice={setShopItemPrice}
             handleAddManualShopping={handleAddManualShopping}
             shoppingList={shoppingList}
             toggleShoppingPurchased={toggleShoppingPurchased}
@@ -888,6 +897,8 @@ export default function App() {
         setFormBarcode={setFormBarcode}
         formImageUrl={formImageUrl}
         setFormImageUrl={setFormImageUrl}
+        formExpiryDate={formExpiryDate}
+        setFormExpiryDate={setFormExpiryDate}
         formCategory={formCategory}
         setFormCategory={setFormCategory}
         formUnit={formUnit}

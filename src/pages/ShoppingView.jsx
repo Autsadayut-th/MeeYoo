@@ -5,16 +5,38 @@ export function ShoppingView({
   setShopItemName,
   shopItemQty,
   setShopItemQty,
+  shopItemPrice,
+  setShopItemPrice,
   handleAddManualShopping,
   shoppingList,
   toggleShoppingPurchased,
   handleRestockPurchased
 }) {
+  const totalEstimatedCost = shoppingList.reduce((sum, item) => {
+    const qty = item.quantity_needed || 1;
+    const price = item.estimated_price || 0;
+    return sum + (qty * price);
+  }, 0);
+
   return (
     <div className="space-y-4">
+      {/* BUDGET ESTIMATION SUMMARY CARD */}
+      <div className="glass-card p-4 border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20 flex items-center justify-between">
+        <div>
+          <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">ประมาณการค่าใช้จ่ายรวม</span>
+          <div className="font-heading text-xl font-bold text-amber-900 dark:text-amber-200 mt-0.5">
+            ฿{totalEstimatedCost.toLocaleString('th-TH')} <span className="text-xs font-normal text-amber-700/80 dark:text-amber-400">บาท</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">รายการทั้งหมด</span>
+          <div className="font-heading text-lg font-bold text-amber-900 dark:text-amber-200">{shoppingList.length} รายการ</div>
+        </div>
+      </div>
+
       <div className="glass-card p-4">
         <h3 className="font-heading font-semibold text-sm text-stone-900 dark:text-white mb-3 flex items-center gap-2">
-          <i className="fa-solid fa-cart-plus text-emerald-600 text-xs"></i>
+          <i className="fa-solid fa-cart-plus text-amber-600 text-xs"></i>
           <span>เพิ่มรายการซื้อของ</span>
         </h3>
 
@@ -24,7 +46,7 @@ export function ShoppingView({
             placeholder="ชื่อสินค้าที่จะซื้อ..."
             value={shopItemName}
             onChange={e => setShopItemName(e.target.value)}
-            className="flex-1 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
+            className="flex-1 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-amber-500"
           />
           <input 
             type="number" 
@@ -32,11 +54,19 @@ export function ShoppingView({
             placeholder="จำนวน"
             value={shopItemQty}
             onChange={e => setShopItemQty(e.target.value)}
-            className="w-16 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-2 py-2 text-xs text-stone-900 dark:text-white text-center focus:outline-none focus:border-emerald-500"
+            className="w-16 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-2 py-2 text-xs text-stone-900 dark:text-white text-center focus:outline-none focus:border-amber-500"
+          />
+          <input 
+            type="number" 
+            min="0"
+            placeholder="ราคา/ชิ้น"
+            value={shopItemPrice || ''}
+            onChange={e => setShopItemPrice && setShopItemPrice(e.target.value)}
+            className="w-20 bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-2 py-2 text-xs text-stone-900 dark:text-white text-center focus:outline-none focus:border-amber-500"
           />
           <button 
             type="submit"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 rounded-lg transition"
+            className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs px-4 py-2 rounded-lg transition"
           >
             <i className="fa-solid fa-plus"></i> เพิ่ม
           </button>

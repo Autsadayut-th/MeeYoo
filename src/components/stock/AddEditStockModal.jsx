@@ -166,10 +166,20 @@ export function AddEditStockModal({
                 min="1"
                 value={formMinThreshold}
                 onChange={e => setFormMinThreshold(e.target.value)}
-                className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-amber-500"
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-stone-700 dark:text-slate-300 mb-1">วันหมดอายุ (ถ้ามี)</label>
+            <input 
+              type="date"
+              value={formExpiryDate || ''}
+              onChange={e => setFormExpiryDate && setFormExpiryDate(e.target.value)}
+              className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-amber-500"
+            />
           </div>
 
           <div>
