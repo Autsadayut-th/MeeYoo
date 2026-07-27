@@ -62,6 +62,9 @@ export const stockService = {
         const { error } = await supabase.from('items').upsert([payload], { onConflict: 'id' });
         if (error) {
           console.error("Supabase saveItem Error:", error.message, error.details);
+          if (error.code === '42501' || (error.message && error.message.includes('row-level security'))) {
+            alert('⚠️ Supabase RLS Policy บล็อกการบันทึก กรุณารัน SQL ปลดล็อกสิทธิ์ใน Supabase Dashboard');
+          }
           return null;
         } else {
           console.log("Supabase saveItem Success:", item.name);
