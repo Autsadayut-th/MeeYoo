@@ -99,7 +99,12 @@ export const homeService = {
           .select('*')
           .eq('invite_code', uppercaseCode)
           .single();
-        if (data) joinedHome = data;
+        if (data) {
+          joinedHome = {
+            ...data,
+            code: data.invite_code || data.code || uppercaseCode
+          };
+        }
 
         if (joinedHome && user) {
           await this.addMember(joinedHome.id, user, 'สมาชิก', 'pending');
@@ -223,7 +228,8 @@ export const homeService = {
             email: m.user_email || m.email || 'user@meeyoo.app',
             name: m.user_name || m.name || 'สมาชิก',
             role: m.role || 'สมาชิก',
-            status: m.status || 'approved'
+            status: m.status || 'approved',
+            avatar_url: m.avatar_url || ''
           }));
         }
       } catch (err) {
@@ -250,7 +256,8 @@ export const homeService = {
           email: m.user_email || m.email || 'user@meeyoo.app',
           name: m.user_name || m.name || 'สมาชิก',
           role: m.role || 'สมาชิก',
-          status: 'pending'
+          status: 'pending',
+          avatar_url: m.avatar_url || ''
         }));
       }
     } catch (err) {}

@@ -25,13 +25,14 @@ export function ensureUUID(idStr) {
   if (idStr && uuidRegex.test(idStr)) {
     return idStr;
   }
-  if (!idStr || idStr === 'h_home_8829' || idStr === 'HOME-8829' || idStr.startsWith('h_home_8829')) {
+  if (!idStr) {
     return '88290000-0000-0000-0000-000000000000';
   }
   if (typeof idStr === 'string' && idStr.trim()) {
+    const cleanStr = idStr.trim().toUpperCase();
     let hash = 0;
-    for (let i = 0; i < idStr.length; i++) {
-      hash = (hash << 5) - hash + idStr.charCodeAt(i);
+    for (let i = 0; i < cleanStr.length; i++) {
+      hash = (hash << 5) - hash + cleanStr.charCodeAt(i);
       hash |= 0;
     }
     const hex = Math.abs(hash).toString(16).padStart(12, '0');
