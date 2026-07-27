@@ -117,6 +117,7 @@ export default function App() {
   const [formMinThreshold, setFormMinThreshold] = useState(1);
   const [formIcon, setFormIcon] = useState('📦');
   const [formBarcode, setFormBarcode] = useState('');
+  const [formImageUrl, setFormImageUrl] = useState('');
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
   const [toastNotification, setToastNotification] = useState(null);
@@ -484,6 +485,7 @@ export default function App() {
         unit: formUnit,
         min_threshold: Number(formMinThreshold),
         icon: formIcon,
+        image_url: formImageUrl.trim(),
         barcode: formBarcode.trim(),
         updated_at: new Date().toISOString()
       };
@@ -500,6 +502,7 @@ export default function App() {
         unit: formUnit,
         min_threshold: Number(formMinThreshold),
         icon: formIcon,
+        image_url: formImageUrl.trim(),
         barcode: formBarcode.trim(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -521,6 +524,7 @@ export default function App() {
     setFormUnit(item.unit);
     setFormMinThreshold(item.min_threshold);
     setFormIcon(item.icon || '📦');
+    setFormImageUrl(item.image_url || '');
     setFormBarcode(item.barcode || '');
     setShowAddModal(true);
   };
@@ -532,6 +536,7 @@ export default function App() {
     setFormUnit('ชิ้น');
     setFormMinThreshold(1);
     setFormIcon('📦');
+    setFormImageUrl('');
     setFormBarcode('');
     setEditingItem(null);
     setShowAddModal(false);
@@ -637,6 +642,26 @@ export default function App() {
     await homeService.rejectMember(house.id, req.id);
     triggerHaptic();
     setPendingRequests(prev => prev.filter(r => r.id !== req.id));
+  };
+
+  const handleUpdateMemberProfile = async (newName, avatarUrl) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, name: newName, avatar_url: avatarUrl };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('meeyoo_current_user', JSON.stringify(updatedUser));
+    if (house && house.id) {
+      await homeService.updateMemberProfile(house.id, currentUser.id, newName, avatarUrl);
+      const freshMembers = await homeService.fetchMembers(house.id);
+      if (freshMembers && freshMembers.length > 0) setMembers(freshMembers);
+    }
+  };
+
+  const handleUpdateHomeName = async (newName) => {
+    if (!house || !house.id || !newName) return;
+    const updatedHouse = { ...house, name: newName };
+    setHouse(updatedHouse);
+    localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(updatedHouse));
+    await homeService.updateHomeName(house.id, newName);
   };
 
   const handleHomeCreated = (newHouse) => {
@@ -802,6 +827,8 @@ export default function App() {
             pendingRequests={pendingRequests}
             onApproveMember={handleApproveMember}
             onRejectMember={handleRejectMember}
+            onUpdateMemberProfile={handleUpdateMemberProfile}
+            onUpdateHomeName={handleUpdateHomeName}
             handleSignOut={handleSignOut}
             onOpenInviteModal={() => setShowInviteModal(true)}
             triggerHaptic={triggerHaptic}
@@ -850,6 +877,8 @@ export default function App() {
         setFormName={setFormName}
         formBarcode={formBarcode}
         setFormBarcode={setFormBarcode}
+        formImageUrl={formImageUrl}
+        setFormImageUrl={setFormImageUrl}
         formCategory={formCategory}
         setFormCategory={setFormCategory}
         formUnit={formUnit}

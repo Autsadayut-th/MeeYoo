@@ -47,6 +47,7 @@ export const stockService = {
           unit: item.unit,
           min_threshold: isNaN(minThresh) ? 1 : Math.max(0, minThresh),
           icon: item.icon || '📦',
+          image_url: item.image_url || '',
           barcode: item.barcode || '',
           updated_at: new Date().toISOString()
         };

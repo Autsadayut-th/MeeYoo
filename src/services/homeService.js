@@ -157,6 +157,41 @@ export const homeService = {
     }
   },
 
+  async updateMemberProfile(homeId, userId, newName, avatarUrl) {
+    if (!userId) return;
+    const validHomeId = ensureUUID(homeId);
+    const validUserId = ensureUUID(userId);
+    if (supabase) {
+      try {
+        await supabase
+          .from('home_members')
+          .update({
+            user_name: newName,
+            avatar_url: avatarUrl || ''
+          })
+          .eq('home_id', validHomeId)
+          .eq('user_id', validUserId);
+      } catch (e) {
+        console.warn("Supabase updateMemberProfile warning:", e);
+      }
+    }
+  },
+
+  async updateHomeName(homeId, newName) {
+    if (!homeId || !newName.trim()) return;
+    const validHomeId = ensureUUID(homeId);
+    if (supabase) {
+      try {
+        await supabase
+          .from('homes')
+          .update({ name: newName.trim() })
+          .eq('id', validHomeId);
+      } catch (e) {
+        console.warn("Supabase updateHomeName warning:", e);
+      }
+    }
+  },
+
   async checkMemberStatus(homeId, userId) {
     if (!supabase || !userId) return 'approved';
     const validHomeId = ensureUUID(homeId);

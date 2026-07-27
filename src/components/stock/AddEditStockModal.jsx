@@ -20,9 +20,26 @@ export function AddEditStockModal({
   setFormMinThreshold,
   formIcon,
   setFormIcon,
+  formImageUrl,
+  setFormImageUrl,
   onOpenScanner
 }) {
   if (!isOpen) return null;
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('กรุณาเลือกไฟล์รูปภาพขนาดไม่เกิน 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormImageUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
@@ -47,6 +64,42 @@ export function AddEditStockModal({
               className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-stone-700 dark:text-slate-300 mb-1">รูปภาพสินค้า (อัปโหลดรูปหรือใส่ลิงก์)</label>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+                {formImageUrl ? (
+                  <img src={formImageUrl} alt="Product" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl">{formIcon || '📦'}</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <input 
+                  type="text" 
+                  placeholder="วาง URL รูปภาพสินค้า..."
+                  value={formImageUrl}
+                  onChange={e => setFormImageUrl(e.target.value)}
+                  className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                />
+                <label className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-semibold cursor-pointer hover:underline">
+                  <i className="fa-solid fa-cloud-arrow-up"></i>
+                  <span>เลือกรูปภาพจากเครื่อง</span>
+                  <input type="file" accept="image/*" onChange={handleImageFileChange} className="hidden" />
+                </label>
+                {formImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setFormImageUrl('')}
+                    className="ml-3 text-[11px] text-rose-500 hover:underline"
+                  >
+                    ลบรูป
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
@@ -125,7 +178,7 @@ export function AddEditStockModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-stone-700 dark:text-slate-300 mb-1">ไอคอน</label>
+            <label className="block text-xs font-semibold text-stone-700 dark:text-slate-300 mb-1">ไอคอน (สำรองถ้าไม่มีรูป)</label>
             <div className="flex gap-2 text-xl overflow-x-auto pb-1">
               {['🧼', '🧴', '🧻', '✨', '☕', '🥤', '🍞', '📦'].map(ic => (
                 <button

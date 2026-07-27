@@ -80,12 +80,14 @@ export function StockView({
                 onTouchEnd={handleTouchEnd}
                 className="glass-card relative overflow-hidden p-4 space-y-3 touch-pan-y"
               >
-                <div className={`absolute top-0 left-0 right-0 h-0.5 ${statusBarClass}`}></div>
-
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-stone-100 dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0">
-                      {item.icon || <i className="fa-solid fa-cube text-stone-400"></i>}
+                    <div className="w-10 h-10 rounded-lg bg-stone-100 dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-xl shrink-0 overflow-hidden">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        item.icon || <i className="fa-solid fa-cube text-stone-400"></i>
+                      )}
                     </div>
                     <div>
                       <h3 className="font-heading font-semibold text-sm text-stone-900 dark:text-white">{item.name}</h3>

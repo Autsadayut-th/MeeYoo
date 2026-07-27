@@ -12,9 +12,12 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
 
   const isMountedRef = useRef(false);
 
+  const [detectedCode, setDetectedCode] = useState('');
+
   useEffect(() => {
     isMountedRef.current = isOpen;
     if (isOpen) {
+      setDetectedCode('');
       startCamera();
     } else {
       stopCamera();
@@ -65,11 +68,18 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
           try {
             const barcodes = await barcodeDetector.detect(videoRef.current);
             if (barcodes && barcodes.length > 0 && isMountedRef.current) {
-              const code = barcodes[0].rawValue;
-              triggerBeepAndHaptic();
-              onScanSuccess(code);
-              stopCamera();
-              return;
+              const code = barcodes[0].rawValue ? barcodes[0].rawValue.trim() : '';
+              if (code) {
+                setDetectedCode(code);
+                triggerBeepAndHaptic();
+                setTimeout(() => {
+                  if (isMountedRef.current) {
+                    onScanSuccess(code);
+                    stopCamera();
+                  }
+                }, 400);
+                return;
+              }
             }
           } catch (err) {
             console.error('Barcode detection error:', err);
@@ -152,10 +162,17 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
               </div>
             </div>
 
-            <div className="absolute bottom-3 left-0 right-0 text-center pointer-events-none">
-              <span className="bg-stone-900/80 text-white text-[11px] font-medium px-3 py-1 rounded-full backdrop-blur-sm">
-                วางบาร์โค้ดให้อยู่ในกรอบสีเขียว
-              </span>
+            <div className="absolute bottom-3 left-0 right-0 text-center pointer-events-none px-4">
+              {detectedCode ? (
+                <span className="bg-emerald-600 text-white text-xs font-mono font-bold px-3 py-1.5 rounded-full shadow-lg border border-emerald-400 flex items-center justify-center gap-1.5 inline-flex animate-bounce">
+                  <i className="fa-solid fa-circle-check text-xs"></i>
+                  <span>สแกนสำเร็จ: {detectedCode}</span>
+                </span>
+              ) : (
+                <span className="bg-stone-900/80 text-white text-[11px] font-medium px-3 py-1 rounded-full backdrop-blur-sm">
+                  วางบาร์โค้ดให้อยู่ในกรอบสีเขียว
+                </span>
+              )}
             </div>
           </div>
         )}

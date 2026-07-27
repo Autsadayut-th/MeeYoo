@@ -107,8 +107,12 @@ export function DashboardView({ currentUser, house, stats, items, setActiveTab, 
                 <div key={item.id} className="bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-9 h-9 rounded-lg bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-lg shrink-0">
-                        {item.icon || <i className="fa-solid fa-cube text-stone-400"></i>}
+                      <div className="w-9 h-9 rounded-lg bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 flex items-center justify-center text-lg shrink-0 overflow-hidden">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          item.icon || <i className="fa-solid fa-cube text-stone-400"></i>
+                        )}
                       </div>
                       <div className="overflow-hidden">
                         <div className="font-semibold text-sm text-stone-900 dark:text-white truncate">{item.name}</div>
