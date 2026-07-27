@@ -95,8 +95,15 @@ export default function App() {
 
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
+  const [toastNotification, setToastNotification] = useState(null);
+  const prevMembersRef = useRef([]);
 
-
+  useEffect(() => {
+    if (toastNotification) {
+      const timer = setTimeout(() => setToastNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastNotification]);
 
   // Touch Swipe Gesture Refs
   const touchStartX = useRef(0);
@@ -218,9 +225,24 @@ export default function App() {
 
       homeService.fetchMembers(house.id).then(fetched => {
         if (fetched && fetched.length > 0) {
+          if (prevMembersRef.current.length > 0 && fetched.length > prevMembersRef.current.length) {
+            const added = fetched.find(nm => 
+              !prevMembersRef.current.some(pm => pm.id === nm.id || (pm.email && pm.email === nm.email))
+            );
+            if (added && (!currentUser || (added.email !== currentUser.email && added.id !== currentUser.id))) {
+              const newName = added.name || added.user_name || added.email || 'สมาชิกใหม่';
+              triggerHaptic([120, 60, 120, 60, 200]);
+              setToastNotification({
+                title: 'สมาชิกใหม่เข้าร่วมบ้าน! 🎉',
+                message: `คุณ ${newName} ได้เข้าร่วมบ้าน ${house.name} เรียบร้อยแล้ว`
+              });
+            }
+          }
+          prevMembersRef.current = fetched;
           setMembers(fetched);
         } else if (currentUser && currentUser.email) {
           const userWithRole = { ...currentUser, role: currentUser.role || 'เจ้าของบ้าน' };
+          prevMembersRef.current = [userWithRole];
           setMembers([userWithRole]);
         }
       });
@@ -238,7 +260,23 @@ export default function App() {
       });
 
       const subMembers = homeService.subscribeToMembers(house.id, (newMembers) => {
-        if (Array.isArray(newMembers) && newMembers.length > 0) setMembers(newMembers);
+        if (Array.isArray(newMembers) && newMembers.length > 0) {
+          if (prevMembersRef.current.length > 0 && newMembers.length > prevMembersRef.current.length) {
+            const added = newMembers.find(nm => 
+              !prevMembersRef.current.some(pm => pm.id === nm.id || (pm.email && pm.email === nm.email))
+            );
+            if (added && (!currentUser || (added.email !== currentUser.email && added.id !== currentUser.id))) {
+              const newName = added.name || added.user_name || added.email || 'สมาชิกใหม่';
+              triggerHaptic([120, 60, 120, 60, 200]);
+              setToastNotification({
+                title: 'สมาชิกใหม่เข้าร่วมบ้าน! 🎉',
+                message: `คุณ ${newName} ได้เข้าร่วมบ้าน ${house.name} เรียบร้อยแล้ว`
+              });
+            }
+          }
+          prevMembersRef.current = newMembers;
+          setMembers(newMembers);
+        }
       });
 
       return () => {
@@ -609,6 +647,26 @@ export default function App() {
 
   return (
     <div className="min-h-screen relative pb-28 md:pb-8 pt-safe">
+
+      {toastNotification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm bg-stone-900/95 dark:bg-slate-800/95 text-white p-3.5 rounded-2xl shadow-2xl border border-emerald-500/50 backdrop-blur-md animate-slide-down flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg shrink-0">
+              <i className="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-emerald-400">{toastNotification.title}</div>
+              <div className="text-xs text-stone-200 dark:text-slate-300 font-medium">{toastNotification.message}</div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setToastNotification(null)} 
+            className="text-stone-400 hover:text-white p-1 text-xs shrink-0"
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      )}
 
       <Header 
         house={house}

@@ -231,3 +231,20 @@ body {
   height: 2.75rem;
   font-size: 1rem;
 }
+
+/* Notification Animations */
+@keyframes slideDownToast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -25px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDownToast 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
