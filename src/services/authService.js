@@ -17,8 +17,7 @@ export const authService = {
       user: { 
         id: 'u_google_' + Date.now(), 
         email: 'user.google@gmail.com', 
-        name: 'Google User 🌐', 
-        avatar: '👨‍💻' 
+        name: 'Google User', 
       } 
     };
   },

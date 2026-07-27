@@ -30,13 +30,13 @@ export function CreateHome({ currentUser, onCreateSuccess, onJoinHomeClick }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="glass-card bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 p-6 rounded-2xl w-full max-w-md shadow-2xl space-y-5">
+      <div className="glass-card bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 p-6 w-full max-w-md shadow-lg space-y-5">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white text-2xl mx-auto shadow-lg shadow-emerald-600/30">
+          <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-xl mx-auto shadow-sm">
             <i className="fa-solid fa-house-medical"></i>
           </div>
-          <h1 className="font-heading font-extrabold text-2xl text-stone-900 dark:text-white">สร้างบ้านหลังใหม่</h1>
-          <p className="text-xs text-stone-500 dark:text-slate-400">ตั้งชื่อบ้านของคุณ เพื่อรับรหัสเชิญสำหรับส่งให้คู่ของคุณเข้าใช้งานร่วมกัน</p>
+          <h1 className="font-heading font-bold text-xl text-stone-900 dark:text-white">สร้างบ้านหลังใหม่</h1>
+          <p className="text-xs text-stone-500 dark:text-slate-400">ตั้งชื่อบ้านของคุณ เพื่อรับรหัสเชิญสำหรับส่งให้คนในบ้านเข้าใช้งานร่วมกัน</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

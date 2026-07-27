@@ -4,14 +4,14 @@ const { useState, useEffect, useMemo } = React;
 const DEFAULT_HOUSE = {
   id: 'h_home_8829',
   code: 'HOME-8829',
-  name: 'บ้านของเรา 🏡',
+  name: 'บ้านของเรา',
   inviteLink: 'https://meeyoo.app/invite?code=HOME-8829',
   created_at: new Date().toISOString()
 };
 
 const DEFAULT_MEMBERS = [
-  { id: 'u1', name: 'User 1 (คุณสมชาย)', email: 'user1@meeyoo.app', role: 'เจ้าของบ้าน', avatar: '👨‍💻' },
-  { id: 'u2', name: 'User 2 (คุณสมหญิง)', email: 'user2@meeyoo.app', role: 'สมาชิก', avatar: '👩‍🎨' }
+  { id: 'u1', name: 'User 1 (คุณสมชาย)', email: 'user1@meeyoo.app', role: 'เจ้าของบ้าน' },
+  { id: 'u2', name: 'User 2 (คุณสมหญิง)', email: 'user2@meeyoo.app', role: 'สมาชิก' }
 ];
 
 const DEFAULT_ITEMS = [

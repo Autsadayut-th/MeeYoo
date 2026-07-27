@@ -25,7 +25,7 @@ import { supabase } from './services/supabaseClient';
 const DEFAULT_HOUSE = {
   id: '88290000-0000-0000-0000-000000000000',
   code: 'HOME-8829',
-  name: 'บ้านของเรา 🏡',
+  name: 'บ้านของเรา',
   inviteLink: 'https://meeyoo.app/invite?code=HOME-8829',
   created_at: new Date().toISOString()
 };
@@ -96,8 +96,7 @@ export default function App() {
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
 
-  // Confetti Animation Particles State
-  const [confettiParticles, setConfettiParticles] = useState([]);
+
 
   // Touch Swipe Gesture Refs
   const touchStartX = useRef(0);
@@ -139,7 +138,6 @@ export default function App() {
             id: u.id,
             email: u.email || 'google.user@gmail.com',
             name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Google User'),
-            avatar: '👨‍💻'
           };
           setCurrentUser(userObj);
           setAuthView('app');
@@ -153,7 +151,6 @@ export default function App() {
             id: u.id,
             email: u.email || 'google.user@gmail.com',
             name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Google User'),
-            avatar: '👨‍💻'
           };
           setCurrentUser(userObj);
           setAuthView('app');
@@ -164,19 +161,7 @@ export default function App() {
     }
   }, []);
 
-  const triggerConfetti = () => {
-    const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6'];
-    const particles = Array.from({ length: 40 }).map((_, i) => ({
-      id: i + '_' + Date.now(),
-      left: Math.random() * 100 + 'vw',
-      color: colors[Math.floor(Math.random() * colors.length)],
-      delay: Math.random() * 0.4 + 's',
-      size: Math.random() * 8 + 6 + 'px'
-    }));
 
-    setConfettiParticles(particles);
-    setTimeout(() => setConfettiParticles([]), 2600);
-  };
 
   // Initial Fetch & Supabase Realtime Websocket Subscriptions for Multi-device Sync!
   useEffect(() => {
@@ -493,7 +478,6 @@ export default function App() {
 
   const handleRestockPurchased = (shopItem) => {
     triggerHaptic([50, 50, 100]);
-    triggerConfetti();
 
     const existing = items.find(i => i.id === shopItem.item_id || i.name.toLowerCase() === shopItem.item_name.toLowerCase());
 
@@ -551,7 +535,7 @@ export default function App() {
   const handleHomeCreated = (newHouse) => {
     setHouse(newHouse);
     if (currentUser) {
-      const ownerUser = { ...currentUser, role: 'เจ้าของบ้าน', avatar: '👨‍💻' };
+      const ownerUser = { ...currentUser, role: 'เจ้าของบ้าน' };
       setCurrentUser(ownerUser);
       setMembers([ownerUser]);
     }
@@ -564,7 +548,7 @@ export default function App() {
   const handleHomeJoined = (joinedHouse) => {
     setHouse(joinedHouse);
     if (currentUser) {
-      const memberUser = { ...currentUser, role: 'สมาชิก', avatar: '👩‍🎨' };
+      const memberUser = { ...currentUser, role: 'สมาชิก' };
       setCurrentUser(memberUser);
       setMembers(prev => {
         const exists = prev.some(m => m.email === memberUser.email);
@@ -617,32 +601,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen relative pb-28 md:pb-8 pt-safe">
-      {/* CONFETTI ANIMATION OVERLAY */}
-      {confettiParticles.length > 0 && (
-        <div className="confetti-container">
-          {confettiParticles.map(p => (
-            <div 
-              key={p.id}
-              className="confetti-particle"
-              style={{
-                left: p.left,
-                backgroundColor: p.color,
-                width: p.size,
-                height: p.size,
-                animationDelay: p.delay
-              }}
-            />
-          ))}
-        </div>
-      )}
 
-      <div className="bg-blobs">
-        <div className="blob blob-1"></div>
-        <div className="blob blob-2"></div>
-        <div className="blob blob-3"></div>
-      </div>
-
-      {/* MODULAR HEADER COMPONENT */}
       <Header 
         house={house}
         isDarkMode={isDarkMode}
@@ -720,16 +679,15 @@ export default function App() {
         )}
       </main>
 
-      {/* QUICK FLOATING ADD BUTTON */}
       <button 
         onClick={() => { triggerHaptic(); resetForm(); setShowAddModal(true); }}
-        className="fixed right-5 bottom-20 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-600 text-white text-2xl shadow-xl shadow-emerald-600/30 flex items-center justify-center active:scale-95 transition"
-        title="เพิ่มสินค้าใหม่เข้าคลัง"
+        className="fixed right-5 bottom-20 z-40 w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xl shadow-md flex items-center justify-center transition"
+        title="เพิ่มสินค้า"
       >
         <i className="fa-solid fa-plus"></i>
       </button>
 
-      {/* MODULAR BOTTOM NAVIGATION */}
+
       <Navigation 
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -737,21 +695,21 @@ export default function App() {
         triggerHaptic={triggerHaptic}
       />
 
-      {/* HOUSEHOLD INVITE MODAL (QR CODE & SHARE LINK) */}
+
       <InviteModal 
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         house={house}
       />
 
-      {/* BARCODE SCANNER MODAL */}
+
       <BarcodeScannerModal 
         isOpen={showScannerModal}
         onClose={() => setShowScannerModal(false)}
         onScanSuccess={handleBarcodeScanned}
       />
 
-      {/* ADD / EDIT STOCK ITEM MODAL */}
+
       <AddEditStockModal 
         isOpen={showAddModal}
         editingItem={editingItem}

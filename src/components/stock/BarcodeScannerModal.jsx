@@ -104,7 +104,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="glass-card bg-white border border-stone-200 p-5 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl max-h-[95vh] overflow-y-auto pb-safe">
+      <div className="glass-card bg-white border border-stone-200 p-5 rounded-t-xl sm:rounded-xl w-full max-w-lg shadow-lg max-h-[95vh] overflow-y-auto pb-safe">
         <div className="flex justify-between items-center mb-3 border-b border-stone-100 pb-2.5">
           <h3 className="font-heading font-bold text-base text-stone-900 flex items-center gap-2">
             <i className="fa-solid fa-barcode text-emerald-600"></i>
