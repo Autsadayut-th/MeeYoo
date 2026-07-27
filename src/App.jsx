@@ -35,36 +35,65 @@ export default function App() {
   
   // Real Account Session check
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_current_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('meeyoo_current_user');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return (parsed && typeof parsed === 'object') ? parsed : null;
+    } catch (e) {
+      return null;
+    }
   });
 
   // Auth Screen Flow: Default to 'login' if user is not logged in yet!
   const [authView, setAuthView] = useState(() => {
-    const savedUser = localStorage.getItem('meeyoo_current_user');
-    return savedUser ? 'app' : 'login';
+    try {
+      const savedUser = localStorage.getItem('meeyoo_current_user');
+      const parsed = savedUser ? JSON.parse(savedUser) : null;
+      return (parsed && parsed.email) ? 'app' : 'login';
+    } catch (e) {
+      return 'login';
+    }
   });
 
   const [house, setHouse] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_active_house_v3');
-    return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
+    try {
+      const saved = localStorage.getItem('meeyoo_active_house_v3');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return (parsed && parsed.id && parsed.name) ? parsed : DEFAULT_HOUSE;
+    } catch (e) {
+      return DEFAULT_HOUSE;
+    }
   });
 
   // Dynamic Members List in Active House
   const [members, setMembers] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_house_members_v3');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('meeyoo_house_members_v3');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   // Theme Mode State
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('meeyoo_theme') === 'dark';
+    try {
+      return localStorage.getItem('meeyoo_theme') === 'dark';
+    } catch (e) {
+      return false;
+    }
   });
 
   // Real Production State
   const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem('meeyoo_items_v3');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('meeyoo_items_v3');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [transactions, setTransactions] = useState(() => {
