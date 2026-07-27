@@ -17,8 +17,12 @@ export const historyService = {
         console.warn("Supabase fetchHistory fallback to local:", e);
       }
     }
-    const saved = localStorage.getItem('meeyoo_transactions_v3');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('meeyoo_transactions_v3');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   },
 
   async addTransaction(tx, homeId) {
@@ -29,15 +33,19 @@ export const historyService = {
 
         await homeService.ensureHomeExists(validHomeId);
 
+        const qBefore = Number(tx.qty_before);
+        const qAfter = Number(tx.qty_after);
+        const qChange = Number(tx.change_amount);
+
         const { error } = await supabase.from('stock_transactions').insert([{
           id: validTxId,
           home_id: validHomeId,
           item_name: tx.item_name,
           user_name: tx.user_name,
           action_type: tx.action_type,
-          qty_before: Number(tx.qty_before),
-          qty_after: Number(tx.qty_after),
-          change_amount: Number(tx.change_amount),
+          qty_before: isNaN(qBefore) ? 0 : qBefore,
+          qty_after: isNaN(qAfter) ? 0 : qAfter,
+          change_amount: isNaN(qChange) ? 0 : qChange,
           note: tx.note || ''
         }]);
         if (error) console.error("Supabase addTransaction error:", error.message);

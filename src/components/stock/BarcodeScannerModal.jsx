@@ -10,7 +10,10 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
   const [manualCode, setManualCode] = useState('');
   const [scanning, setScanning] = useState(false);
 
+  const isMountedRef = useRef(false);
+
   useEffect(() => {
+    isMountedRef.current = isOpen;
     if (isOpen) {
       startCamera();
     } else {
@@ -18,6 +21,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
     }
 
     return () => {
+      isMountedRef.current = false;
       stopCamera();
     };
   }, [isOpen]);
@@ -34,30 +38,33 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { exact: 'environment' } }
       }).catch(async () => {
-        // Fallback to any camera if environment camera is not available
         return await navigator.mediaDevices.getUserMedia({ video: true });
       });
+
+      if (!isMountedRef.current) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        return;
+      }
 
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
 
-      // Check for BarcodeDetector API
       if ('BarcodeDetector' in window) {
         const barcodeDetector = new window.BarcodeDetector({
           formats: ['ean_13', 'ean_8', 'code_128', 'qr_code', 'upc_a', 'upc_e']
         });
 
         const detectLoop = async () => {
-          if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
-            if (isOpen) requestAnimationFrame(detectLoop);
+          if (!isMountedRef.current || !videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
+            if (isMountedRef.current) requestAnimationFrame(detectLoop);
             return;
           }
 
           try {
             const barcodes = await barcodeDetector.detect(videoRef.current);
-            if (barcodes && barcodes.length > 0) {
+            if (barcodes && barcodes.length > 0 && isMountedRef.current) {
               const code = barcodes[0].rawValue;
               triggerBeepAndHaptic();
               onScanSuccess(code);
@@ -68,15 +75,17 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) {
             console.error('Barcode detection error:', err);
           }
 
-          if (isOpen) requestAnimationFrame(detectLoop);
+          if (isMountedRef.current) requestAnimationFrame(detectLoop);
         };
 
         requestAnimationFrame(detectLoop);
       }
     } catch (err) {
-      console.error('Camera access error:', err);
-      setErrorMsg('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์การใช้กล้องในเบราว์เซอร์');
-      setScanning(false);
+      if (isMountedRef.current) {
+        console.error('Camera access error:', err);
+        setErrorMsg('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์การใช้กล้องในเบราว์เซอร์');
+        setScanning(false);
+      }
     }
   };
 

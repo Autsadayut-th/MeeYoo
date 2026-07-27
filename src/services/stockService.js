@@ -18,8 +18,12 @@ export const stockService = {
         console.warn("Supabase fetchItems fallback to local:", e);
       }
     }
-    const saved = localStorage.getItem('meeyoo_items_v3');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('meeyoo_items_v3');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   },
 
   async saveItem(item, homeId) {
@@ -31,14 +35,17 @@ export const stockService = {
         // Ensure home row exists in Supabase DB to prevent FK violation error
         await homeService.ensureHomeExists(validHomeId);
 
+        const qty = Number(item.quantity);
+        const minThresh = Number(item.min_threshold);
+
         const payload = {
           id: validItemId,
           home_id: validHomeId,
           name: item.name,
           category: item.category,
-          quantity: Number(item.quantity),
+          quantity: isNaN(qty) ? 1 : Math.max(0, qty),
           unit: item.unit,
-          min_threshold: Number(item.min_threshold),
+          min_threshold: isNaN(minThresh) ? 1 : Math.max(0, minThresh),
           icon: item.icon || '📦',
           barcode: item.barcode || '',
           updated_at: new Date().toISOString()

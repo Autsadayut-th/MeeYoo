@@ -16,8 +16,12 @@ export const shoppingService = {
         console.warn("Supabase fetchShoppingList fallback to local:", e);
       }
     }
-    const saved = localStorage.getItem('meeyoo_shopping_v3');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('meeyoo_shopping_v3');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   },
 
   async saveShoppingItem(item, homeId) {
@@ -28,11 +32,13 @@ export const shoppingService = {
 
         await homeService.ensureHomeExists(validHomeId);
 
+        const qtyNeeded = Number(item.quantity_needed);
+
         const { error } = await supabase.from('shopping_list').upsert([{
           id: validItemId,
           home_id: validHomeId,
           item_name: item.item_name,
-          quantity_needed: Number(item.quantity_needed),
+          quantity_needed: isNaN(qtyNeeded) ? 1 : Math.max(1, qtyNeeded),
           is_purchased: Boolean(item.is_purchased),
           auto_added: Boolean(item.auto_added)
         }]);
