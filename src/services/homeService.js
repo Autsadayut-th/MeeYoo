@@ -245,7 +245,7 @@ export const homeService = {
           .from('home_members')
           .select('*')
           .eq('home_id', validHomeId);
-        if (!error && data && data.length > 0) {
+        if (!error && Array.isArray(data)) {
           const approved = data.filter(m => !m.status || m.status === 'approved');
           return approved.map(m => ({
             id: m.user_id || m.id,
@@ -257,12 +257,16 @@ export const homeService = {
           }));
         }
       } catch (err) {
-        console.warn("Supabase fetchMembers fallback to local:", err);
+        console.warn("Supabase fetchMembers error:", err);
       }
     }
 
-    const saved = localStorage.getItem('meeyoo_house_members_v3');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('meeyoo_house_members_v3');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   },
 
   async fetchPendingMembers(homeId) {

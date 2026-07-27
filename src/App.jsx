@@ -661,11 +661,13 @@ export default function App() {
       const memberUser = { ...currentUser, role: 'สมาชิก' };
       setCurrentUser(memberUser);
       localStorage.setItem('meeyoo_current_user', JSON.stringify(memberUser));
-      setMembers(prev => {
-        const exists = prev.some(m => m.email === memberUser.email);
-        return exists ? prev : [...prev, memberUser];
-      });
+      setMembers([memberUser]);
+      localStorage.setItem('meeyoo_house_members_v3', JSON.stringify([memberUser]));
     }
+    setItems([]);
+    setTransactions([]);
+    setShoppingList([]);
+    
     // ถ้าสถานะเป็น pending ให้รอการอนุมัติก่อน
     if (joinedHouse.membershipStatus === 'pending') {
       setAuthView('waiting_approval');
