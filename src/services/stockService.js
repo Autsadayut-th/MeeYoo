@@ -16,25 +16,6 @@ export const stockService = {
           .order('created_at', { ascending: false });
 
         if (!error && Array.isArray(data)) {
-          // If Cloud returns items (or 0 items for a new house), check if we need one-time push of old local storage items
-          if (data.length === 0) {
-            try {
-              const saved = localStorage.getItem('meeyoo_items_v3');
-              const localItems = saved ? JSON.parse(saved) : [];
-              if (localItems.length > 0) {
-                for (const item of localItems) {
-                  await this.saveItem(item, validHomeId);
-                }
-                localStorage.removeItem('meeyoo_items_v3');
-                const { data: freshCloudData } = await supabase
-                  .from('items')
-                  .select('*')
-                  .eq('home_id', validHomeId)
-                  .order('created_at', { ascending: false });
-                if (freshCloudData) return freshCloudData;
-              }
-            } catch (e) {}
-          }
           return data;
         } else if (error) {
           console.error("Supabase fetchItems error:", error.message);
@@ -44,7 +25,6 @@ export const stockService = {
       }
     }
 
-    // Pure fallback if offline
     try {
       const saved = localStorage.getItem('meeyoo_items_v3');
       return saved ? JSON.parse(saved) : [];
@@ -54,11 +34,12 @@ export const stockService = {
   },
 
   async saveItem(item, homeId) {
+    if (!homeId) return null;
+    const validHomeId = ensureUUID(homeId);
+    const validItemId = ensureUUID(item.id);
+
     if (supabase) {
       try {
-        const validHomeId = ensureUUID(homeId);
-        const validItemId = ensureUUID(item.id);
-
         await homeService.ensureHomeExists(validHomeId);
 
         const qty = Number(item.quantity);
@@ -78,21 +59,24 @@ export const stockService = {
           updated_at: new Date().toISOString()
         };
 
-        const { error } = await supabase.from('items').upsert([payload]);
+        const { error } = await supabase.from('items').upsert([payload], { onConflict: 'id' });
         if (error) {
           console.error("Supabase saveItem Error:", error.message, error.details);
         } else {
           console.log("Supabase saveItem Success:", item.name);
         }
+
+        return await this.fetchItems(validHomeId);
       } catch (e) {
         console.warn("Supabase saveItem warning:", e);
       }
     }
+    return null;
   },
 
-  async deleteItem(itemId) {
+  async deleteItem(itemId, homeId) {
+    const validItemId = ensureUUID(itemId);
     if (supabase) {
-      const validItemId = ensureUUID(itemId);
       try {
         const { error } = await supabase.from('items').delete().eq('id', validItemId);
         if (error) console.error("Supabase deleteItem error:", error.message);
@@ -100,6 +84,8 @@ export const stockService = {
         console.warn("Supabase deleteItem warning:", e);
       }
     }
+    if (homeId) return await this.fetchItems(homeId);
+    return null;
   },
 
   subscribeToItems(homeId, onUpdate) {
@@ -109,7 +95,9 @@ export const stockService = {
       const channel = supabase
         .channel(`public:items:${validHomeId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter: `home_id=eq.${validHomeId}` }, () => {
-          this.fetchItems(validHomeId).then(items => onUpdate(items));
+          this.fetchItems(validHomeId).then(items => {
+            if (Array.isArray(items)) onUpdate(items);
+          });
         })
         .subscribe();
       return channel;

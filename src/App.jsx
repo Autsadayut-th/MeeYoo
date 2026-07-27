@@ -434,9 +434,9 @@ export default function App() {
     }
   };
 
-  const handleSaveItemForm = (e) => {
+  const handleSaveItemForm = async (e) => {
     e.preventDefault();
-    if (!formName.trim()) return;
+    if (!formName.trim() || !house || !house.id) return;
     triggerHaptic();
 
     if (editingItem) {
@@ -454,7 +454,8 @@ export default function App() {
         updated_at: new Date().toISOString()
       };
       setItems(prev => prev.map(i => i.id === editingItem.id ? updated : i));
-      stockService.saveItem(updated, house.id);
+      const fresh = await stockService.saveItem(updated, house.id);
+      if (Array.isArray(fresh)) setItems(fresh);
 
       recordTransaction(formName.trim(), 'UPDATE', editingItem.quantity, newQty, newQty - editingItem.quantity, 'แก้ไขรายละเอียดสินค้า');
     } else {
@@ -473,7 +474,9 @@ export default function App() {
       };
 
       setItems(prev => [newItem, ...prev]);
-      stockService.saveItem(newItem, house.id);
+      const fresh = await stockService.saveItem(newItem, house.id);
+      if (Array.isArray(fresh)) setItems(fresh);
+
       recordTransaction(newItem.name, 'ADD', 0, newItem.quantity, newItem.quantity, 'เพิ่มสินค้าใหม่เข้าคลัง');
     }
 
