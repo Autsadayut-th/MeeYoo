@@ -11,20 +11,41 @@ export const homeService = {
     }
   },
 
-  async ensureHomeExists(homeId, name = 'บ้านของเรา', code = 'HOME-8829') {
+  async ensureHomeExists(homeId, name, code) {
     if (!supabase || !homeId) return;
     const validHomeId = ensureUUID(homeId);
     try {
       const { data } = await supabase.from('homes').select('id').eq('id', validHomeId).single();
       if (!data) {
-        await supabase.from('homes').upsert([{
+        // Only create if we have a valid name and code
+        const homeName = name || 'บ้านของเรา';
+        const homeCode = code || ('HOME-' + validHomeId.slice(-4).toUpperCase());
+        const { error } = await supabase.from('homes').upsert([{
           id: validHomeId,
-          name: name,
-          invite_code: code
-        }]);
+          name: homeName,
+          invite_code: homeCode
+        }], { onConflict: 'id' });
+        if (error) {
+          console.error("ensureHomeExists upsert error:", error.message);
+        }
       }
     } catch (e) {
-      console.warn("Supabase ensureHomeExists warning:", e);
+      // PGRST116 = no rows returned from .single(), meaning home doesn't exist yet
+      if (e?.code === 'PGRST116') {
+        const homeName = name || 'บ้านของเรา';
+        const homeCode = code || ('HOME-' + validHomeId.slice(-4).toUpperCase());
+        try {
+          await supabase.from('homes').upsert([{
+            id: validHomeId,
+            name: homeName,
+            invite_code: homeCode
+          }], { onConflict: 'id' });
+        } catch (innerErr) {
+          console.warn("ensureHomeExists inner upsert warning:", innerErr);
+        }
+      } else {
+        console.warn("ensureHomeExists warning:", e);
+      }
     }
   },
 
@@ -100,25 +121,32 @@ export const homeService = {
 
     if (supabase) {
       try {
+        // First try to find home by invite_code
         const { data } = await supabase
           .from('homes')
           .select('*')
           .eq('invite_code', uppercaseCode)
           .single();
         if (data) {
+          // Use the ACTUAL id from the database, not our computed one
           joinedHome = {
             ...data,
-            id: validHomeId,
+            id: data.id,
             code: data.invite_code || data.code || uppercaseCode
           };
         }
       } catch (err) {
-        console.warn("Supabase joinHome fallback to local:", err);
+        console.warn("Supabase joinHome lookup:", err?.message || err);
       }
 
-      await this.ensureHomeExists(validHomeId, joinedHome.name, uppercaseCode);
+      // If home doesn't exist in DB yet, create it with our deterministic ID
+      if (!joinedHome.id || joinedHome.id === validHomeId) {
+        await this.ensureHomeExists(validHomeId, joinedHome.name, uppercaseCode);
+        joinedHome.id = validHomeId;
+      }
+
       if (user) {
-        await this.addMember(validHomeId, user, 'สมาชิก', 'pending');
+        await this.addMember(joinedHome.id, user, 'สมาชิก', 'pending');
       }
     }
 
