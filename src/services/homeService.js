@@ -55,8 +55,7 @@ export const homeService = {
 
   async createHome(name, ownerUser) {
     const randomCode = 'HOME-' + Math.floor(1000 + Math.random() * 9000);
-    const idStr = 'home_' + Date.now();
-    const validHomeId = ensureUUID(idStr);
+    const validHomeId = ensureUUID('home_' + randomCode);
 
     const newHome = {
       id: validHomeId,
@@ -68,11 +67,11 @@ export const homeService = {
 
     if (supabase) {
       try {
-        const { error } = await supabase.from('homes').insert([{
+        const { error } = await supabase.from('homes').upsert([{
           id: validHomeId,
           name: name,
           invite_code: randomCode
-        }]);
+        }], { onConflict: 'id' });
 
         if (error) console.error("Supabase createHome error:", error.message);
 
@@ -90,11 +89,18 @@ export const homeService = {
 
   async joinHome(inviteCode, user) {
     const uppercaseCode = inviteCode.toUpperCase().trim();
-    let joinedHome = null;
+    const validHomeId = ensureUUID('home_' + uppercaseCode);
+
+    let joinedHome = {
+      id: validHomeId,
+      code: uppercaseCode,
+      name: `บ้าน ${uppercaseCode}`,
+      created_at: new Date().toISOString()
+    };
 
     if (supabase) {
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('homes')
           .select('*')
           .eq('invite_code', uppercaseCode)
@@ -102,31 +108,21 @@ export const homeService = {
         if (data) {
           joinedHome = {
             ...data,
+            id: validHomeId,
             code: data.invite_code || data.code || uppercaseCode
           };
-        }
-
-        if (joinedHome && user) {
-          await this.addMember(joinedHome.id, user, 'สมาชิก', 'pending');
         }
       } catch (err) {
         console.warn("Supabase joinHome fallback to local:", err);
       }
-    }
 
-    if (!joinedHome) {
-      const generatedId = ensureUUID('home_' + uppercaseCode);
-      joinedHome = {
-        id: generatedId,
-        code: uppercaseCode,
-        name: `บ้าน ${uppercaseCode}`,
-        created_at: new Date().toISOString()
-      };
-      if (supabase && user) {
-        await this.addMember(generatedId, user, 'สมาชิก', 'pending');
+      await this.ensureHomeExists(validHomeId, joinedHome.name, uppercaseCode);
+      if (user) {
+        await this.addMember(validHomeId, user, 'สมาชิก', 'pending');
       }
     }
 
+    localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(joinedHome));
     return { ...joinedHome, membershipStatus: 'pending' };
   },
 

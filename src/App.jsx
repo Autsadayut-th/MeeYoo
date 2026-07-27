@@ -55,6 +55,13 @@ export default function App() {
     try {
       const saved = localStorage.getItem('meeyoo_active_house_v3');
       const parsed = saved ? JSON.parse(saved) : null;
+      if (parsed && parsed.name && (parsed.code || parsed.invite_code)) {
+        const code = (parsed.code || parsed.invite_code).toUpperCase().trim();
+        const deterministicId = ensureUUID('home_' + code);
+        const normalized = { ...parsed, id: deterministicId, code };
+        localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(normalized));
+        return normalized;
+      }
       return (parsed && parsed.id && parsed.name) ? parsed : null;
     } catch (e) {
       return null;
