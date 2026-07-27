@@ -628,6 +628,21 @@ export default function App() {
     }
   };
 
+  const handleApproveMember = async (req) => {
+    if (!house || !req) return;
+    await homeService.approveMember(house.id, req.id);
+    triggerHaptic([100, 50, 100]);
+    setPendingRequests(prev => prev.filter(r => r.id !== req.id));
+    homeService.fetchMembers(house.id).then(list => setMembers(list));
+  };
+
+  const handleRejectMember = async (req) => {
+    if (!house || !req) return;
+    await homeService.rejectMember(house.id, req.id);
+    triggerHaptic();
+    setPendingRequests(prev => prev.filter(r => r.id !== req.id));
+  };
+
   const handleHomeCreated = (newHouse) => {
     setHouse(newHouse);
     if (currentUser) {
