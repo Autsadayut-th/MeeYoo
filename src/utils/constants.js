@@ -18,13 +18,7 @@ export const UNITS = [
   'ถุง'
 ];
 
-export const DEFAULT_HOUSE = {
-  id: '88290000-0000-0000-0000-000000000000',
-  code: 'HOME-8829',
-  name: 'บ้านของเรา 🏡',
-  inviteLink: 'https://meeyoo.app/invite?code=HOME-8829',
-  created_at: new Date().toISOString()
-};
+
 
 export function ensureUUID(idStr) {
   const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;

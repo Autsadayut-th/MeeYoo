@@ -22,14 +22,6 @@ import { historyService } from './services/historyService';
 import { shoppingService } from './services/shoppingService';
 import { supabase } from './services/supabaseClient';
 
-const DEFAULT_HOUSE = {
-  id: '88290000-0000-0000-0000-000000000000',
-  code: 'HOME-8829',
-  name: 'บ้านของเรา',
-  inviteLink: 'https://meeyoo.app/invite?code=HOME-8829',
-  created_at: new Date().toISOString()
-};
-
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -44,12 +36,16 @@ export default function App() {
     }
   });
 
-  // Auth Screen Flow: Default to 'login' if user is not logged in yet!
+  // Auth Screen Flow: If logged in but no house, send to join_home!
   const [authView, setAuthView] = useState(() => {
     try {
       const savedUser = localStorage.getItem('meeyoo_current_user');
-      const parsed = savedUser ? JSON.parse(savedUser) : null;
-      return (parsed && parsed.email) ? 'app' : 'login';
+      const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+      if (!parsedUser || !parsedUser.email) return 'login';
+      const savedHouse = localStorage.getItem('meeyoo_active_house_v3');
+      const parsedHouse = savedHouse ? JSON.parse(savedHouse) : null;
+      if (!parsedHouse || !parsedHouse.id) return 'join_home';
+      return 'app';
     } catch (e) {
       return 'login';
     }
@@ -59,9 +55,9 @@ export default function App() {
     try {
       const saved = localStorage.getItem('meeyoo_active_house_v3');
       const parsed = saved ? JSON.parse(saved) : null;
-      return (parsed && parsed.id && parsed.name) ? parsed : DEFAULT_HOUSE;
+      return (parsed && parsed.id && parsed.name) ? parsed : null;
     } catch (e) {
-      return DEFAULT_HOUSE;
+      return null;
     }
   });
 

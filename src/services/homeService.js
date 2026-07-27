@@ -1,14 +1,18 @@
 import { supabase } from './supabaseClient';
-import { DEFAULT_HOUSE, ensureUUID } from '../utils/constants';
+import { ensureUUID } from '../utils/constants';
 
 export const homeService = {
   async getActiveHome() {
-    const saved = localStorage.getItem('meeyoo_active_house_v3');
-    return saved ? JSON.parse(saved) : DEFAULT_HOUSE;
+    try {
+      const saved = localStorage.getItem('meeyoo_active_house_v3');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
   },
 
-  async ensureHomeExists(homeId = '88290000-0000-0000-0000-000000000000', name = 'บ้านของเรา 🏡', code = 'HOME-8829') {
-    if (!supabase) return;
+  async ensureHomeExists(homeId, name = 'บ้านของเรา', code = 'HOME-8829') {
+    if (!supabase || !homeId) return;
     const validHomeId = ensureUUID(homeId);
     try {
       const { data } = await supabase.from('homes').select('id').eq('id', validHomeId).single();
@@ -49,41 +53,44 @@ export const homeService = {
     }
   },
 
-  async createHome(homeName, user) {
-    const code = 'HOME-' + Math.floor(1000 + Math.random() * 9000);
-    const validId = crypto.randomUUID ? crypto.randomUUID() : '88290000-0000-0000-0000-' + Date.now().toString(16).padStart(12, '0');
-    
+  async createHome(name, ownerUser) {
+    const randomCode = 'HOME-' + Math.floor(1000 + Math.random() * 9000);
+    const idStr = 'home_' + Date.now();
+    const validHomeId = ensureUUID(idStr);
+
     const newHome = {
-      id: validId,
-      code: code,
-      name: homeName.trim() + ' 🏡',
-      inviteLink: `https://meeyoo.app/invite?code=${code}`,
+      id: validHomeId,
+      name: name,
+      code: randomCode,
+      invite_code: randomCode,
       created_at: new Date().toISOString()
     };
 
     if (supabase) {
       try {
-        const { error } = await supabase.from('homes').upsert([{
-          id: newHome.id,
-          name: homeName.trim(),
-          invite_code: code
+        const { error } = await supabase.from('homes').insert([{
+          id: validHomeId,
+          name: name,
+          invite_code: randomCode
         }]);
-        if (error) console.error("Supabase createHome error:", error);
 
-        if (user) {
-          await this.addMember(newHome.id, user, 'เจ้าของบ้าน', 'approved');
+        if (error) console.error("Supabase createHome error:", error.message);
+
+        if (ownerUser) {
+          await this.addMember(validHomeId, ownerUser, 'เจ้าของบ้าน', 'approved');
         }
       } catch (err) {
         console.warn("Supabase createHome fallback to local:", err);
       }
     }
 
+    localStorage.setItem('meeyoo_active_house_v3', JSON.stringify(newHome));
     return newHome;
   },
 
   async joinHome(inviteCode, user) {
     const uppercaseCode = inviteCode.toUpperCase().trim();
-    let joinedHome = { ...DEFAULT_HOUSE, code: uppercaseCode };
+    let joinedHome = null;
 
     if (supabase) {
       try {
@@ -94,11 +101,24 @@ export const homeService = {
           .single();
         if (data) joinedHome = data;
 
-        if (user) {
+        if (joinedHome && user) {
           await this.addMember(joinedHome.id, user, 'สมาชิก', 'pending');
         }
       } catch (err) {
         console.warn("Supabase joinHome fallback to local:", err);
+      }
+    }
+
+    if (!joinedHome) {
+      const generatedId = ensureUUID('home_' + uppercaseCode);
+      joinedHome = {
+        id: generatedId,
+        code: uppercaseCode,
+        name: `บ้าน ${uppercaseCode}`,
+        created_at: new Date().toISOString()
+      };
+      if (supabase && user) {
+        await this.addMember(generatedId, user, 'สมาชิก', 'pending');
       }
     }
 
