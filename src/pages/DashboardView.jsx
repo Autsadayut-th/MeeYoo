@@ -10,7 +10,7 @@ export function DashboardView({ currentUser, house, stats, items, setActiveTab, 
     <div className="space-y-4">
       <div className="glass-card p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-700 text-white flex items-center justify-center font-bold overflow-hidden shrink-0 text-sm shadow-md">
+          <div className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold overflow-hidden shrink-0 text-sm shadow-md">
             {currentUser?.avatar_url ? (
               <img src={currentUser.avatar_url} alt={currentUser.name} className="w-full h-full object-cover" />
             ) : (
@@ -30,7 +30,7 @@ export function DashboardView({ currentUser, house, stats, items, setActiveTab, 
             if (triggerHaptic) triggerHaptic();
             if (onOpenInviteModal) onOpenInviteModal();
           }}
-          className="bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition flex items-center gap-1.5"
+          className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition flex items-center gap-1.5"
         >
           <i className="fa-solid fa-qrcode text-sm"></i>
           <span>เชิญสมาชิก</span>
@@ -41,7 +41,7 @@ export function DashboardView({ currentUser, house, stats, items, setActiveTab, 
         <div className="glass-card p-4">
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-stone-500 dark:text-slate-400 font-medium">สินค้าทั้งหมด</span>
-            <i className="fa-solid fa-boxes-stacked text-amber-700 text-xs"></i>
+            <i className="fa-solid fa-boxes-stacked text-amber-600 text-xs"></i>
           </div>
           <div className="font-heading text-2xl font-bold text-stone-900 dark:text-white mt-1">{stats.total}</div>
           <div className="text-[10px] text-stone-400 dark:text-slate-500 mt-0.5">รายการในบ้าน</div>

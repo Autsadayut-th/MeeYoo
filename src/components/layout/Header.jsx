@@ -10,7 +10,7 @@ export function Header({ house, isDarkMode, toggleDarkMode, onOpenScanner, curre
     <header className="sticky top-0 z-30 bg-[#faf8f5]/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-[#e8e4df] dark:border-slate-800 px-4 py-3">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-amber-700 flex items-center justify-center text-white text-sm shadow-sm">
+          <div className="w-9 h-9 rounded-lg bg-amber-600 flex items-center justify-center text-white text-sm shadow-sm">
             <i className="fa-solid fa-boxes-stacked"></i>
           </div>
           <div>
@@ -45,10 +45,10 @@ export function Header({ house, isDarkMode, toggleDarkMode, onOpenScanner, curre
 
           <div 
             onClick={onSelectMembersTab}
-            className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs cursor-pointer hover:border-amber-600 transition"
+            className="flex items-center gap-1.5 bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs cursor-pointer hover:border-amber-500 transition"
             title="สมาชิก"
           >
-            <div className="w-5 h-5 rounded-full bg-amber-700 text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
+            <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
               {currentUser?.avatar_url ? (
                 <img src={currentUser.avatar_url} alt={currentUser.name} className="w-full h-full object-cover" />
               ) : (

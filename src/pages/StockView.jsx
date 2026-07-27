@@ -35,7 +35,7 @@ export function StockView({
 
           <button 
             onClick={() => { if (triggerHaptic) triggerHaptic(); setShowScannerModal(true); }}
-            className="bg-amber-700 hover:bg-amber-800 text-white font-semibold text-xs px-3 py-2.5 rounded-lg flex items-center gap-1.5 shrink-0 transition"
+            className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs px-3 py-2.5 rounded-lg flex items-center gap-1.5 shrink-0 transition"
           >
             <i className="fa-solid fa-barcode text-sm"></i> สแกน
           </button>
@@ -46,7 +46,7 @@ export function StockView({
             <button
               key={cat}
               onClick={() => { if (triggerHaptic) triggerHaptic(); setSelectedCategory(cat); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition ${selectedCategory === cat ? 'bg-amber-700 border-amber-700 text-white' : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition ${selectedCategory === cat ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white dark:bg-slate-800 border-stone-200 dark:border-slate-700 text-stone-600 dark:text-slate-300'}`}
             >
               {cat === 'ALL' ? 'ทุกหมวดหมู่' : cat}
             </button>

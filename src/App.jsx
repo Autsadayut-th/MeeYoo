@@ -856,7 +856,7 @@ export default function App() {
 
       <button 
         onClick={() => { triggerHaptic(); resetForm(); setShowAddModal(true); }}
-        className="fixed right-5 bottom-20 z-40 w-12 h-12 rounded-full bg-amber-700 hover:bg-amber-800 text-white text-xl shadow-lg flex items-center justify-center transition"
+        className="fixed right-5 bottom-20 z-40 w-12 h-12 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xl shadow-lg flex items-center justify-center transition"
         title="เพิ่มสินค้า"
       >
         <i className="fa-solid fa-plus"></i>
