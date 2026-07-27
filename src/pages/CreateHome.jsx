@@ -32,7 +32,7 @@ export function CreateHome({ currentUser, onCreateSuccess, onJoinHomeClick }) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="glass-card bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 p-6 w-full max-w-md shadow-lg space-y-5">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-xl mx-auto shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-amber-700 flex items-center justify-center text-white text-xl mx-auto shadow-sm">
             <i className="fa-solid fa-house-medical"></i>
           </div>
           <h1 className="font-heading font-bold text-xl text-stone-900 dark:text-white">สร้างบ้านหลังใหม่</h1>
@@ -47,7 +47,7 @@ export function CreateHome({ currentUser, onCreateSuccess, onJoinHomeClick }) {
               placeholder="เช่น บ้านแสนสุข, คอนโดสุขุมวิท..."
               value={homeName}
               onChange={e => setHomeName(e.target.value)}
-              className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              className="w-full bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-stone-900 dark:text-white focus:outline-none focus:border-amber-500"
               required
             />
           </div>
@@ -55,7 +55,7 @@ export function CreateHome({ currentUser, onCreateSuccess, onJoinHomeClick }) {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+            className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold text-sm py-3 rounded-xl shadow-lg shadow-amber-700/30 transition flex items-center justify-center gap-2"
           >
             {loading ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-plus"></i>}
             <span>สร้างบ้านและรับรหัสเชิญ</span>
@@ -64,7 +64,7 @@ export function CreateHome({ currentUser, onCreateSuccess, onJoinHomeClick }) {
 
         <div className="text-center text-xs text-stone-500 dark:text-slate-400 pt-2 border-t border-stone-100 dark:border-slate-800">
           มีรหัสเชิญจากคู่ของคุณอยู่แล้ว?{' '}
-          <button onClick={onJoinHomeClick} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
+          <button onClick={onJoinHomeClick} className="text-amber-700 dark:text-amber-400 font-bold hover:underline">
             ใส่รหัสเพื่อเข้าร่วมบ้าน
           </button>
         </div>

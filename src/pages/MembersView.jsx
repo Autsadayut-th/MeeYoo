@@ -91,7 +91,7 @@ export function MembersView({
               if (triggerHaptic) triggerHaptic();
               if (onOpenInviteModal) onOpenInviteModal();
             }}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition"
+            className="bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition"
           >
             <i className="fa-solid fa-qrcode text-sm"></i>
             <span>แสดง QR Code</span>
@@ -137,7 +137,7 @@ export function MembersView({
                       if (triggerHaptic) triggerHaptic();
                       if (onApproveMember) onApproveMember(req);
                     }}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition"
+                    className="bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition"
                   >
                     <i className="fa-solid fa-check"></i>
                     <span>อนุมัติ</span>
