@@ -120,6 +120,7 @@ export default function App() {
   const [formUnit, setFormUnit] = useState('ชิ้น');
   const [formMinThreshold, setFormMinThreshold] = useState(1);
   const [formIcon, setFormIcon] = useState('📦');
+  const [formBarcode, setFormBarcode] = useState('');
   const [shopItemName, setShopItemName] = useState('');
   const [shopItemQty, setShopItemQty] = useState(1);
   const [toastNotification, setToastNotification] = useState(null);
