@@ -392,11 +392,12 @@ export default function App() {
     );
   };
 
-  const handleDeleteItem = (item) => {
+  const handleDeleteItem = async (item) => {
     triggerHaptic();
     if (confirm(`คุณต้องการลบรายการ "${item.name}" ออกจากคลังสินค้าหรือไม่?`)) {
       setItems(prev => prev.filter(i => i.id !== item.id));
-      stockService.deleteItem(item.id);
+      const fresh = await stockService.deleteItem(item.id, house?.id);
+      if (Array.isArray(fresh) && fresh.length >= 0) setItems(fresh);
       recordTransaction(item.name, 'DELETE', item.quantity, 0, -item.quantity, 'ลบสินค้าออกจากระบบ');
     }
   };
